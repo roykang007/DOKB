@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --color-primary: #0D1B2A;
+  --color-accent-teal: #00C9B1;
+  --color-accent-gold: #F5C842;
+  --color-highlight-red: #C0392B;
+}
+
+@layer base {
+  body {
+    @apply bg-primary text-white font-sans;
+  }
+}
+
+@layer utilities {
+  .hanji-texture {
+    background-color: #f5f2ed;
+    background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+    color: #1a1a1a;
+  }
+
+  .dokkaebi-glow {
+    box-shadow: 0 0 30px rgba(0, 201, 177, 0.5);
+    animation: glow 2s infinite alternate;
+  }
+
+  .dokkaebi-fire {
+    position: relative;
+    filter: drop-shadow(0 0 15px rgba(0, 201, 177, 0.8));
+  }
+
+  .dokkaebi-fire::after {
+    content: '';
+    position: absolute;
+    inset: -20px;
+    background: radial-gradient(circle, rgba(0, 201, 177, 0.4) 0%, transparent 70%);
+    animation: flicker 0.15s infinite alternate;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .traditional-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+  }
+
+  .shimmer-btn {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    transform: skewX(-25deg);
+    transition: none;
+  }
+
+  .shimmer-btn:hover::after {
+    animation: shimmer 0.75s ease-in-out;
+  }
+
+  .card-glow-hover {
+    transition: all 0.3s ease;
+  }
+
+  .card-glow-hover:hover {
+    box-shadow: 0 0 25px rgba(0, 201, 177, 0.4);
+    border-color: rgba(0, 201, 177, 0.6) !important;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    left: 150%;
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 15px rgba(0, 201, 177, 0.4);
+    transform: scale(1);
+  }
+  to {
+    box-shadow: 0 0 40px rgba(0, 201, 177, 0.7);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes flicker {
+  0% { opacity: 0.8; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.fire-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--color-accent-teal);
+  border-radius: 50%;
+  filter: blur(2px);
+  pointer-events: none;
+}
