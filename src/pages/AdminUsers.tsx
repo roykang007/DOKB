@@ -10,7 +10,8 @@ import {
   ArrowLeft,
   Check,
   Trash2,
-  RefreshCcw
+  RefreshCcw,
+  Mail
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -140,8 +141,16 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             <button 
               onClick={() => navigate('/admin/products')}
               className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-primary hover:shadow-md transition-all"
+              title={lang === 'KOR' ? '상품 관리' : 'Product Management'}
             >
               <ArrowLeft className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={() => navigate('/admin/inquiries')}
+              className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-primary hover:shadow-md transition-all"
+              title={lang === 'KOR' ? '문의 관리' : 'Inquiry Management'}
+            >
+              <Mail className="w-6 h-6 text-accent-teal" />
             </button>
             <div>
               <h1 className="text-4xl font-serif font-bold text-primary mb-2">

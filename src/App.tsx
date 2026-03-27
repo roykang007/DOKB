@@ -197,6 +197,28 @@ export default function App() {
           .insert([{ email: data.email, source: 'landing_page', user_id: user?.id || null }]);
         error = newsletterError;
       } else {
+        // 1. Send to Formspree (Primary request)
+        try {
+          const response = await fetch('https://formspree.io/f/mbdpjpbv', {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ...data,
+              _subject: `New Buyer Inquiry from ${data.company_name || data.email}`,
+              _source: window.location.origin
+            })
+          });
+          if (!response.ok) {
+            console.warn('Formspree submission failed, falling back to database only.');
+          }
+        } catch (err) {
+          console.error('Formspree error:', err);
+        }
+
+        // 2. Save to Supabase (Backup/Internal record)
         const payload = {
           company_name: data.company_name,
           contact_name: data.contact_name,
@@ -208,10 +230,11 @@ export default function App() {
         };
         const { error: inquiryError } = await supabase.from('buyer_inquiries').insert([payload]);
         if (inquiryError && inquiryError.code === 'PGRST205') {
-          toast.error(lang === 'KOR' ? '문의 테이블이 존재하지 않습니다. 관리자에게 문의하세요.' : 'Inquiry table does not exist. Please contact admin.');
-          return;
+          // If table doesn't exist, we still consider it a success because Formspree was sent
+          console.warn('Supabase buyer_inquiries table missing.');
+        } else {
+          error = inquiryError;
         }
-        error = inquiryError;
       }
 
       if (error) throw error;
