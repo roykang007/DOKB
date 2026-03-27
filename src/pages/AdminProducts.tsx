@@ -7,6 +7,7 @@ import {
   Search, 
   Filter, 
   MoreVertical, 
+  Users,
   Edit, 
   Trash2, 
   Eye, 
@@ -100,12 +101,34 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
   const checkAdmin = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user || user.user_metadata?.role !== 'admin') {
+    if (!user) {
+      toast.error(lang === 'KOR' ? '로그인이 필요합니다.' : 'Login required.');
+      navigate('/');
+      setIsAdmin(false);
+      return;
+    }
+
+    // Check metadata first
+    if (user.user_metadata?.role === 'admin') {
+      setIsAdmin(true);
+      fetchData();
+      return;
+    }
+
+    // Double check with database
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('auth_id', user.id)
+      .single();
+
+    if (error || userData?.role !== 'admin') {
       toast.error(lang === 'KOR' ? '관리자 권한이 없습니다.' : 'Admin access denied.');
       navigate('/');
       setIsAdmin(false);
       return;
     }
+
     setIsAdmin(true);
     fetchData();
   };
@@ -377,13 +400,22 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               {lang === 'KOR' ? '도깨비몰의 상품 카탈로그를 관리하세요' : 'Manage your DOKB Mall product catalog'}
             </p>
           </div>
-          <button 
-            onClick={() => { resetForm(); setIsModalOpen(true); }}
-            className="flex items-center gap-2 bg-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-          >
-            <Plus className="w-5 h-5" />
-            {lang === 'KOR' ? '새 상품 등록' : 'Add New Product'}
-          </button>
+          <div className="flex flex-wrap gap-4">
+            <button 
+              onClick={() => navigate('/admin/users')}
+              className="flex items-center gap-2 bg-white text-primary border border-gray-100 px-6 py-4 rounded-2xl font-bold hover:bg-gray-50 transition-all shadow-sm"
+            >
+              <Users className="w-5 h-5 text-accent-teal" />
+              {lang === 'KOR' ? '회원 관리' : 'User Management'}
+            </button>
+            <button 
+              onClick={() => { resetForm(); setIsModalOpen(true); }}
+              className="flex items-center gap-2 bg-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+            >
+              <Plus className="w-5 h-5" />
+              {lang === 'KOR' ? '새 상품 등록' : 'Add New Product'}
+            </button>
+          </div>
         </div>
 
         {/* Stats Grid */}

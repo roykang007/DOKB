@@ -18,29 +18,53 @@ import { Cart } from './pages/Cart';
 import { Checkout } from './pages/Checkout';
 import { OrderHistory } from './pages/OrderHistory';
 import { AdminProducts } from './pages/AdminProducts';
+import { AdminUsers } from './pages/AdminUsers';
 
 const ProtectedRoute = ({ user, children, requireAdmin = false }: { user: any, children: React.ReactNode, requireAdmin?: boolean }) => {
   const navigate = useNavigate();
+  const [isVerifying, setIsVerifying] = useState(true);
   
   useEffect(() => {
-    if (user === null) {
-      // Wait a bit for session to load
-      const checkSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          toast.error('Login required');
-          navigate('/');
-        } else if (requireAdmin && session.user.user_metadata?.role !== 'admin') {
-          toast.error('Admin access denied');
-          navigate('/');
+    const checkAccess = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Login required');
+        navigate('/');
+        return;
+      }
+
+      if (requireAdmin) {
+        // First check metadata for quick check
+        if (session.user.user_metadata?.role !== 'admin') {
+          // Double check with database for security
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('role')
+            .eq('auth_id', session.user.id)
+            .single();
+
+          if (error || userData?.role !== 'admin') {
+            toast.error('Admin access denied');
+            navigate('/');
+            return;
+          }
         }
-      };
-      checkSession();
-    } else if (requireAdmin && user.user_metadata?.role !== 'admin') {
-      toast.error('Admin access denied');
-      navigate('/');
-    }
+      }
+      
+      setIsVerifying(false);
+    };
+
+    checkAccess();
   }, [user, navigate, requireAdmin]);
+
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-primary">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent-teal"></div>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 };
@@ -210,6 +234,11 @@ export default function App() {
             <Route path="/admin/products" element={
               <ProtectedRoute user={user} requireAdmin>
                 <AdminProducts lang={lang} />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/users" element={
+              <ProtectedRoute user={user} requireAdmin>
+                <AdminUsers lang={lang} />
               </ProtectedRoute>
             } />
           </Routes>
