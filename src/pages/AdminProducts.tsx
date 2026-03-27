@@ -504,13 +504,6 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
           </div>
           <div className="flex flex-wrap gap-4">
             <button 
-              onClick={() => navigate('/admin/inquiries')}
-              className="flex items-center gap-2 bg-white text-primary border border-gray-100 px-6 py-4 rounded-2xl font-bold hover:bg-gray-50 transition-all shadow-sm"
-            >
-              <Mail className="w-5 h-5 text-accent-teal" />
-              {lang === 'KOR' ? '문의 관리' : 'Inquiry Management'}
-            </button>
-            <button 
               onClick={() => navigate('/admin/users')}
               className="flex items-center gap-2 bg-white text-primary border border-gray-100 px-6 py-4 rounded-2xl font-bold hover:bg-gray-50 transition-all shadow-sm"
             >
