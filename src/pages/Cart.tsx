@@ -70,7 +70,7 @@ export const Cart: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 >
                   <div className="w-32 h-32 rounded-2xl overflow-hidden bg-white/5 flex-shrink-0">
                     <img 
-                      src={item.product?.thumbnail || 'https://picsum.photos/seed/product/200/200'} 
+                      src={(item.product?.thumbnail && item.product.thumbnail.trim() !== "") ? item.product.thumbnail : 'https://picsum.photos/seed/product/200/200'} 
                       alt={lang === 'KOR' ? item.product?.name_ko : item.product?.name_en}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"

@@ -8,7 +8,9 @@ import {
   Building2, 
   User as UserIcon,
   ArrowLeft,
-  Check
+  Check,
+  Trash2,
+  RefreshCcw
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -41,6 +43,15 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       return;
     }
 
+    // Special case for the main admin email - check this BEFORE database query
+    const isMainAdmin = user.email === 'admin@dokbmall.com';
+    
+    if (isMainAdmin) {
+      setIsAdmin(true);
+      fetchUsers();
+      return;
+    }
+
     // Check database for admin role
     const { data: userData, error } = await supabase
       .from('users')
@@ -49,6 +60,9 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       .single();
 
     if (error || userData?.role !== 'admin') {
+      if (error && error.code === '42501') {
+        console.error('Permission denied for users table. Please check RLS policies.');
+      }
       toast.error(lang === 'KOR' ? '관리자 권한이 없습니다.' : 'Admin access denied.');
       navigate('/');
       setIsAdmin(false);
@@ -92,6 +106,24 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!window.confirm(lang === 'KOR' ? '정말로 이 회원을 삭제하시겠습니까? (DB 프로필만 삭제됩니다)' : 'Are you sure you want to delete this user? (Only DB profile will be deleted)')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setUsers(users.filter(u => u.id !== userId));
+      toast.success(lang === 'KOR' ? '회원이 삭제되었습니다.' : 'User deleted successfully.');
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   const filteredUsers = users.filter(u => 
     u.email.toLowerCase().includes(search.toLowerCase()) ||
     (u.name_ko && u.name_ko.toLowerCase().includes(search.toLowerCase()))
@@ -125,15 +157,28 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         {/* Search & Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           <div className="lg:col-span-3">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder={lang === 'KOR' ? '이메일 또는 이름으로 검색...' : 'Search by email or name...'}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-primary shadow-sm transition-all"
-              />
+            <div className="relative flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder={lang === 'KOR' ? '이메일 또는 이름으로 검색...' : 'Search by email or name...'}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-primary shadow-sm transition-all text-primary"
+                />
+              </div>
+              <button 
+                onClick={fetchUsers}
+                disabled={loading}
+                className={cn(
+                  "w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-primary hover:shadow-md transition-all border border-gray-100",
+                  loading && "opacity-50"
+                )}
+                title={lang === 'KOR' ? '새로고침' : 'Refresh'}
+              >
+                <RefreshCcw className={cn("w-6 h-6", loading && "animate-spin")} />
+              </button>
             </div>
           </div>
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center gap-4">
@@ -202,19 +247,28 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">
-                        <select 
-                          value={user.role}
-                          onChange={(e) => handleUpdateRole(user.id, e.target.value as UserProfile['role'])}
-                          className={cn(
-                            "bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 outline-none focus:border-primary transition-all font-bold text-xs cursor-pointer",
-                            user.role === 'admin' && "text-red-600 border-red-100",
-                            user.role === 'b2b_buyer' && "text-teal-600 border-teal-100"
-                          )}
-                        >
-                          <option value="customer">{lang === 'KOR' ? '👤 일반유저' : '👤 Customer'}</option>
-                          <option value="b2b_buyer">{lang === 'KOR' ? '🏢 B2B 바이어' : '🏢 B2B Buyer'}</option>
-                          <option value="admin">{lang === 'KOR' ? '🔑 관리자' : '🔑 Admin'}</option>
-                        </select>
+                        <div className="flex items-center justify-end gap-2">
+                          <select 
+                            value={user.role}
+                            onChange={(e) => handleUpdateRole(user.id, e.target.value as UserProfile['role'])}
+                            className={cn(
+                              "bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 outline-none focus:border-primary transition-all font-bold text-xs cursor-pointer text-primary",
+                              user.role === 'admin' && "text-red-600 border-red-100",
+                              user.role === 'b2b_buyer' && "text-teal-600 border-teal-100"
+                            )}
+                          >
+                            <option value="customer">{lang === 'KOR' ? '👤 일반유저' : '👤 Customer'}</option>
+                            <option value="b2b_buyer">{lang === 'KOR' ? '🏢 B2B 바이어' : '🏢 B2B Buyer'}</option>
+                            <option value="admin">{lang === 'KOR' ? '🔑 관리자' : '🔑 Admin'}</option>
+                          </select>
+                          <button 
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="w-10 h-10 bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all"
+                            title={lang === 'KOR' ? '삭제' : 'Delete'}
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                     </motion.tr>
                   ))}

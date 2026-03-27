@@ -438,7 +438,12 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex gap-4">
                     <div className="w-16 h-16 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
-                      <img src={item.product?.thumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img 
+                        src={(item.product?.thumbnail && item.product.thumbnail.trim() !== "") ? item.product.thumbnail : 'https://picsum.photos/seed/product/200/200'} 
+                        alt="" 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer" 
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white line-clamp-1">

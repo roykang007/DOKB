@@ -31,6 +31,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick, onContactClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { cartCount } = useCart();
   const location = useLocation();
 
@@ -39,6 +40,42 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      // Check for main admin email first
+      if (user.email === 'admin@dokbmall.com') {
+        setIsAdmin(true);
+        return;
+      }
+
+      // Check metadata first for speed
+      if (user.user_metadata?.role === 'admin') {
+        setIsAdmin(true);
+        return;
+      }
+
+      // Verify with database
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (!error && data?.role === 'admin') {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminRole();
+  }, [user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -50,6 +87,14 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
     { key: 'b2b', label: lang === 'KOR' ? 'B2B 바이어' : 'B2B Buyers', path: '/#b2b' },
     { key: 'about', label: lang === 'KOR' ? '소개' : 'About', path: '/#about' },
   ];
+
+  if (isAdmin) {
+    navItems.push({ 
+      key: 'admin', 
+      label: lang === 'KOR' ? '관리자모드' : 'Admin', 
+      path: '/admin/products' 
+    });
+  }
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled || location.pathname !== '/' ? 'bg-primary/90 backdrop-blur-md py-3 shadow-lg' : 'bg-transparent py-6'}`}>
@@ -94,14 +139,6 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
           
           {user ? (
             <div className="flex items-center gap-4">
-              {user.user_metadata?.role === 'admin' && (
-                <Link 
-                  to="/admin/products"
-                  className="flex items-center gap-2 text-xs font-bold text-accent-teal hover:text-white transition-colors border border-accent-teal/30 px-3 py-1 rounded-full"
-                >
-                  Admin
-                </Link>
-              )}
               <Link 
                 to="/mypage/orders"
                 className="flex items-center gap-2 text-xs font-medium text-gray-300 hover:text-accent-gold transition-colors"
@@ -152,14 +189,25 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
           >
             <nav className="flex flex-col gap-6 text-center">
               {navItems.map((item) => (
-                <Link 
-                  key={item.key} 
-                  to={item.path} 
-                  className="text-2xl font-serif"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {item.label}
-                </Link>
+                item.path.startsWith('/#') ? (
+                  <a 
+                    key={item.key} 
+                    href={item.path} 
+                    className="text-2xl font-serif"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <Link 
+                    key={item.key} 
+                    to={item.path} 
+                    className="text-2xl font-serif"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                )
               ))}
               <Link to="/cart" className="text-2xl font-serif" onClick={() => setIsMenuOpen(false)}>
                 {lang === 'KOR' ? '장바구니' : 'Cart'} ({cartCount})

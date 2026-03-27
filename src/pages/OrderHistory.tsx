@@ -161,7 +161,12 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                   {order.order_items.map((item) => (
                     <div key={item.id} className="flex gap-6 items-center">
                       <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white/5 flex-shrink-0">
-                        <img src={item.product?.thumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img 
+                          src={(item.product?.thumbnail && item.product.thumbnail.trim() !== "") ? item.product.thumbnail : 'https://picsum.photos/seed/product/200/200'} 
+                          alt="" 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer" 
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-base font-bold text-white line-clamp-1">

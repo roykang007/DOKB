@@ -161,7 +161,7 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               >
                 <div className="relative aspect-square rounded-3xl overflow-hidden mb-4 bg-white/5 border border-white/5">
                   <img 
-                    src={product.thumbnail || 'https://picsum.photos/seed/product/400/400'} 
+                    src={(product.thumbnail && product.thumbnail.trim() !== "") ? product.thumbnail : 'https://picsum.photos/seed/product/400/400'} 
                     alt={lang === 'KOR' ? product.name_ko : product.name_en}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     referrerPolicy="no-referrer"

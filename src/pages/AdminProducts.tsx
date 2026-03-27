@@ -122,7 +122,10 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       .eq('auth_id', user.id)
       .single();
 
-    if (error || userData?.role !== 'admin') {
+    // Special case for the main admin email
+    const isMainAdmin = user.email === 'admin@dokbmall.com';
+
+    if (!isMainAdmin && (error || userData?.role !== 'admin')) {
       toast.error(lang === 'KOR' ? '관리자 권한이 없습니다.' : 'Admin access denied.');
       navigate('/');
       setIsAdmin(false);
@@ -224,12 +227,40 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // 파일 유효성 검사
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const maxSizeMB = 5;
+
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`${file.name}: ${lang === 'KOR' ? '허용되지 않는 파일 형식입니다. (JPG, PNG, WEBP, GIF만 가능)' : 'Unsupported file format.'}`);
+        return;
+      }
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        toast.error(`${file.name}: ${lang === 'KOR' ? '파일 크기가 5MB를 초과합니다.' : 'File size exceeds 5MB.'}`);
+        return;
+      }
+    }
+
     setImageFiles(prev => [...prev, ...files]);
     
-    const previews = files.map(file => URL.createObjectURL(file as File));
-    setImagePreviews(prev => [...prev, ...previews]);
+    // FileReader를 이용한 로컬 미리보기 생성
+    const newPreviews: string[] = [];
+    for (const file of files) {
+      const previewUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string || '');
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+      });
+      if (previewUrl) newPreviews.push(previewUrl);
+    }
+    
+    setImagePreviews(prev => [...prev, ...newPreviews]);
   };
 
   const removeImage = (index: number) => {
@@ -238,45 +269,81 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
   };
 
   const uploadImages = async (): Promise<string[]> => {
+    console.log('Starting uploadImages, imageFiles length:', imageFiles.length);
+    if (imageFiles.length === 0) return [];
     setIsUploading(true);
     const uploadedUrls: string[] = [];
 
-    for (const file of imageFiles) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `products/${fileName}`;
+    try {
+      for (const file of imageFiles) {
+        console.log('Uploading file:', file.name);
+        // 고유 파일명 생성 (타임스탬프 + 랜덤)
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const filePath = `products/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, file);
+        const { data, error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type
+          });
 
-      if (uploadError) {
-        toast.error(`Upload error: ${uploadError.message}`);
-        continue;
+        if (uploadError) {
+          console.error('Storage 업로드 에러:', uploadError.message);
+          if (uploadError.message.toLowerCase().includes('bucket not found')) {
+            throw new Error(lang === 'KOR' ? 'Supabase Storage에 "product-images" 버킷이 없습니다. 버킷을 먼저 생성해주세요.' : 'Storage bucket "product-images" not found. Please create it in Supabase.');
+          }
+          throw uploadError;
+        }
+
+        // Public URL 가져오기
+        const { data: urlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(data.path);
+        
+        const publicUrl = urlData?.publicUrl;
+
+        // URL 유효성 검사 — 빈 문자열 방지
+        if (!publicUrl || publicUrl === '') {
+          console.error('Public URL 생성 실패');
+          continue;
+        }
+
+        console.log('File uploaded successfully, publicUrl:', publicUrl);
+        uploadedUrls.push(publicUrl);
       }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath);
-      
-      uploadedUrls.push(publicUrl);
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      toast.error(error.message || 'Image upload failed');
+      throw error;
+    } finally {
+      setIsUploading(false);
     }
 
-    setIsUploading(false);
     return uploadedUrls;
   };
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('Starting handleSaveProduct');
 
     try {
       const newImageUrls = await uploadImages();
-      const allImages = [...(formData.images || []), ...newImageUrls];
-      const thumbnail = allImages[0] || '';
+      console.log('New image URLs:', newImageUrls);
 
+      // 이미지 URL 검증 — 빈 값 완전 제거
+      const allImages = [...(formData.images || []), ...newImageUrls].filter(url => url && url.trim() !== "");
+      console.log('All image URLs:', allImages);
+
+      const thumbnail = allImages[0] || null; // null로 설정 (빈 문자열 아님)
+      console.log('Selected thumbnail:', thumbnail);
+
+      const { id, created_at, ...restFormData } = formData;
       const productData = {
-        ...formData,
+        ...restFormData,
         images: allImages,
         thumbnail: thumbnail
       };
@@ -288,14 +355,26 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
           .from('products')
           .update(productData)
           .eq('id', editingProduct.id);
-        if (error) throw error;
+        if (error) {
+          if (error.code === '42501') {
+            toast.error(lang === 'KOR' ? '권한이 부족하여 상품을 수정할 수 없습니다. (RLS 정책 확인 필요)' : 'Insufficient permissions to update product. (Check RLS policies)');
+          }
+          console.error('Error updating product:', error);
+          throw error;
+        }
       } else {
         const { data, error } = await supabase
           .from('products')
           .insert([productData])
           .select()
           .single();
-        if (error) throw error;
+        if (error) {
+          if (error.code === '42501') {
+            toast.error(lang === 'KOR' ? '권한이 부족하여 상품을 등록할 수 없습니다. (RLS 정책 확인 필요)' : 'Insufficient permissions to add product. (Check RLS policies)');
+          }
+          console.error('Error inserting product:', error);
+          throw error;
+        }
         productId = data.id;
       }
 
@@ -303,16 +382,22 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       if (productId) {
         // Delete existing options if editing
         if (editingProduct) {
-          await supabase.from('product_options').delete().eq('product_id', productId);
+          const { error: deleteError } = await supabase.from('product_options').delete().eq('product_id', productId);
+          if (deleteError) console.error('Error deleting old options:', deleteError);
         }
 
         if (formOptions.length > 0) {
-          const optionsToInsert = formOptions.map(opt => ({
+          // Strip id from options before inserting to let database generate new ones
+          const optionsToInsert = formOptions.map(({ id: _, ...opt }: any) => ({
             ...opt,
             product_id: productId
           }));
+          
           const { error: optError } = await supabase.from('product_options').insert(optionsToInsert);
-          if (optError) throw optError;
+          if (optError) {
+            console.error('Error inserting options:', optError);
+            throw optError;
+          }
         }
       }
 
@@ -324,6 +409,23 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       toast.error(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!window.confirm(lang === 'KOR' ? '정말 삭제하시겠습니까?' : 'Are you sure you want to delete this product?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success(lang === 'KOR' ? '삭제되었습니다.' : 'Deleted successfully.');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message);
     }
   };
 
@@ -460,13 +562,13 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                   placeholder={lang === 'KOR' ? '상품 검색...' : 'Search products...'}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-3 outline-none focus:border-primary transition-all"
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-3 outline-none focus:border-primary transition-all text-primary"
                 />
               </div>
               <select 
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="bg-gray-50 border border-gray-100 rounded-xl px-6 py-3 outline-none focus:border-primary transition-all font-bold text-sm"
+                className="bg-gray-50 border border-gray-100 rounded-xl px-6 py-3 outline-none focus:border-primary transition-all font-bold text-sm text-primary"
               >
                 <option value="all">{lang === 'KOR' ? '전체 카테고리' : 'All Categories'}</option>
                 <option value="beauty">Beauty</option>
@@ -525,7 +627,13 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                     <td className="px-6 py-6">
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-100 flex-shrink-0">
-                          <img src={product.thumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          {product.thumbnail && typeof product.thumbnail === 'string' && product.thumbnail.trim() !== "" ? (
+                            <img src={product.thumbnail} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <Package className="w-6 h-6" />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <p className="font-bold text-primary line-clamp-1">{lang === 'KOR' ? product.name_ko : product.name_en}</p>
@@ -621,7 +729,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             type="text" 
                             value={formData.name_ko}
                             onChange={e => setFormData({...formData, name_ko: e.target.value})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all" 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all text-primary" 
                           />
                         </div>
                         <div className="space-y-2">
@@ -631,7 +739,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             type="text" 
                             value={formData.name_en}
                             onChange={e => setFormData({...formData, name_en: e.target.value})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all" 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all text-primary" 
                           />
                         </div>
                       </div>
@@ -641,7 +749,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           <select 
                             value={formData.category}
                             onChange={e => setFormData({...formData, category: e.target.value})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold text-primary"
                           >
                             <option value="beauty">Beauty</option>
                             <option value="food">Food</option>
@@ -655,7 +763,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             type="text" 
                             value={formData.brand}
                             onChange={e => setFormData({...formData, brand: e.target.value})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all" 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all text-primary" 
                           />
                         </div>
                       </div>
@@ -675,7 +783,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             type="number" 
                             value={formData.price}
                             onChange={e => setFormData({...formData, price: Number(e.target.value)})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold" 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold text-primary" 
                           />
                         </div>
                         <div className="space-y-2">
@@ -686,7 +794,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             step="0.01"
                             value={formData.price_usd}
                             onChange={e => setFormData({...formData, price_usd: Number(e.target.value)})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold" 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold text-primary" 
                           />
                         </div>
                         <div className="space-y-2">
@@ -696,7 +804,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             type="number" 
                             value={formData.stock_quantity}
                             onChange={e => setFormData({...formData, stock_quantity: Number(e.target.value)})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold" 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold text-primary" 
                           />
                         </div>
                       </div>
@@ -710,7 +818,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                       </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
                         {/* Existing Images */}
-                        {formData.images?.map((url, i) => (
+                        {formData.images?.filter(url => url && url.trim() !== "").map((url, i) => (
                           <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 group">
                             <img src={url} alt="" className="w-full h-full object-cover" />
                             <button 
@@ -725,7 +833,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                         ))}
                         
                         {/* New Image Previews */}
-                        {imagePreviews.map((url, i) => (
+                        {imagePreviews.filter(url => url && url.trim() !== "").map((url, i) => (
                           <div key={`new-${i}`} className="relative aspect-square rounded-2xl overflow-hidden border border-primary/20 group">
                             <img src={url} alt="" className="w-full h-full object-cover" />
                             <button 
@@ -797,7 +905,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                                     newOpts[i].option_name_ko = e.target.value;
                                     setFormOptions(newOpts);
                                   }}
-                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary" 
+                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary text-primary" 
                                 />
                               </div>
                               <div className="space-y-1">
@@ -811,7 +919,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                                     newOpts[i].option_value_ko = e.target.value;
                                     setFormOptions(newOpts);
                                   }}
-                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary" 
+                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary text-primary" 
                                 />
                               </div>
                               <div className="space-y-1">
@@ -824,7 +932,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                                     newOpts[i].additional_price = Number(e.target.value);
                                     setFormOptions(newOpts);
                                   }}
-                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary" 
+                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary text-primary" 
                                 />
                               </div>
                               <div className="space-y-1">
@@ -837,7 +945,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                                     newOpts[i].stock_quantity = Number(e.target.value);
                                     setFormOptions(newOpts);
                                   }}
-                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary" 
+                                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary text-primary" 
                                 />
                               </div>
                             </div>
@@ -859,7 +967,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             rows={4}
                             value={formData.description_ko}
                             onChange={e => setFormData({...formData, description_ko: e.target.value})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none" 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
                           />
                         </div>
                         <div className="space-y-2">
@@ -868,7 +976,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             rows={4}
                             value={formData.description_en}
                             onChange={e => setFormData({...formData, description_en: e.target.value})}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none" 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
                           />
                         </div>
                       </div>

@@ -150,7 +150,7 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  src={product.images?.[activeImage] || product.thumbnail} 
+                  src={(product.images?.[activeImage] || product.thumbnail) || 'https://picsum.photos/seed/product/800/800'} 
                   alt={lang === 'KOR' ? product.name_ko : product.name_en}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
@@ -174,7 +174,7 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             </div>
 
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              {(product.images?.length ? product.images : [product.thumbnail]).map((img, i) => (
+              {( (product.images?.length ? product.images : [product.thumbnail]) || [] ).filter(url => url && url.trim() !== "").map((img, i) => (
                 <button 
                   key={i}
                   onClick={() => setActiveImage(i)}

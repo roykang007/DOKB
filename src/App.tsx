@@ -36,7 +36,9 @@ const ProtectedRoute = ({ user, children, requireAdmin = false }: { user: any, c
 
       if (requireAdmin) {
         // First check metadata for quick check
-        if (session.user.user_metadata?.role !== 'admin') {
+        const isMainAdmin = session.user.email === 'admin@dokbmall.com';
+        
+        if (!isMainAdmin && session.user.user_metadata?.role !== 'admin') {
           // Double check with database for security
           const { data: userData, error } = await supabase
             .from('users')
@@ -106,7 +108,14 @@ export default function App() {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST205') {
+          console.warn('Table "buyer_inquiries" does not exist in Supabase. Please create it to use inquiry features.');
+          setUserInquiries([]);
+          return;
+        }
+        throw error;
+      }
       setUserInquiries(data || []);
     } catch (error) {
       console.error('Error fetching inquiries:', error);
@@ -124,8 +133,29 @@ export default function App() {
 
     try {
       if (authMode === 'signup') {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+        if (signUpError) throw signUpError;
+        
+        if (signUpData.user) {
+          // Create user profile in public.users table
+          const { error: profileError } = await supabase
+            .from('users')
+            .insert([
+              {
+                auth_id: signUpData.user.id,
+                email: email,
+                role: 'customer',
+                name_ko: email.split('@')[0] // Default name from email
+              }
+            ]);
+          
+          if (profileError) {
+            console.error('Error creating user profile:', profileError);
+            // We don't throw here to avoid blocking the signup process if the profile creation fails
+            // but the auth was successful.
+          }
+        }
+
         setFormStatus('success');
         toast.success(lang === 'KOR' ? '인증 메일을 확인해주세요!' : 'Please check your verification email!');
         setTimeout(() => {
@@ -177,6 +207,10 @@ export default function App() {
           user_id: user?.id || null
         };
         const { error: inquiryError } = await supabase.from('buyer_inquiries').insert([payload]);
+        if (inquiryError && inquiryError.code === 'PGRST205') {
+          toast.error(lang === 'KOR' ? '문의 테이블이 존재하지 않습니다. 관리자에게 문의하세요.' : 'Inquiry table does not exist. Please contact admin.');
+          return;
+        }
         error = inquiryError;
       }
 
