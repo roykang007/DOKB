@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -31,6 +32,7 @@ interface HomeProps {
 }
 
 export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatus, handleFormSubmit, setIsContactModalOpen }) => {
+  const navigate = useNavigate();
   const t = {
     hero: {
       title: lang === 'KOR' ? '뚝딱! 최고의 K-상품을 찾아드립니다' : 'Korean Quality, Magic Delivered',
@@ -283,7 +285,10 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
               <h2 className="text-3xl md:text-4xl lg:text-6xl font-serif font-bold mb-4">{t.categories.title}</h2>
               <div className="h-1 w-20 lg:w-24 bg-accent-gold mx-auto md:mx-0" />
             </div>
-            <button className="flex items-center justify-center gap-2 text-accent-teal font-bold hover:gap-4 transition-all">
+            <button 
+              onClick={() => navigate('/products')}
+              className="flex items-center justify-center gap-2 text-accent-teal font-bold hover:gap-4 transition-all"
+            >
               {t.categories.explore} <ArrowRight className="w-5 h-5" />
             </button>
           </div>
@@ -310,7 +315,19 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
                   <h3 className="text-xl lg:text-2xl font-bold mb-2">{cat.title}</h3>
                   <p className="text-white/70 text-xs lg:text-sm">{cat.desc}</p>
                 </div>
-                <button className="bg-white/10 backdrop-blur-md border border-white/20 py-2.5 lg:py-3 rounded-xl font-bold group-hover:bg-white group-hover:text-primary transition-all text-sm lg:text-base">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const categoryMap: { [key: number]: string } = {
+                      0: 'beauty',
+                      1: 'food',
+                      2: 'lifestyle',
+                      3: 'dokb_brand'
+                    };
+                    navigate(`/products?category=${categoryMap[idx]}`);
+                  }}
+                  className="bg-white/10 backdrop-blur-md border border-white/20 py-2.5 lg:py-3 rounded-xl font-bold group-hover:bg-white group-hover:text-primary transition-all text-sm lg:text-base"
+                >
                   {t.categories.explore}
                 </button>
               </motion.div>

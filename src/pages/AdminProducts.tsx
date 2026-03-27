@@ -228,7 +228,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []) as File[];
     if (files.length === 0) return;
 
     // 파일 유효성 검사

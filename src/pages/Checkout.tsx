@@ -52,7 +52,7 @@ import { toast } from 'sonner';
 type CheckoutStep = 'shipping' | 'payment' | 'confirmation';
 
 export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
-  const { cartItems, totalAmount, totalAmountUsd, clearCart } = useCart();
+  const { cartItems, totalAmount, totalAmountUsd, clearCart, loading: cartLoading } = useCart();
   const navigate = useNavigate();
   const [step, setStep] = useState<CheckoutStep>('shipping');
   const [loading, setLoading] = useState(false);
@@ -81,10 +81,18 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       }
     });
 
-    if (cartItems.length === 0 && step !== 'confirmation') {
+    if (!cartLoading && cartItems.length === 0 && step !== 'confirmation') {
       navigate('/cart');
     }
-  }, [cartItems.length, navigate, step]);
+  }, [cartItems.length, cartLoading, navigate, step]);
+
+  if (cartLoading && step !== 'confirmation') {
+    return (
+      <div className="pt-32 pb-20 min-h-screen bg-primary flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent-teal" />
+      </div>
+    );
+  }
 
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();

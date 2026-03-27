@@ -106,7 +106,11 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       return;
     }
     
-    await addToCart(product.id, selectedOption, quantity);
+    try {
+      await addToCart(product.id, selectedOption, quantity);
+    } catch (error) {
+      // Error handled in CartContext
+    }
   };
 
   const handleBuyNow = async () => {
@@ -120,8 +124,12 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       return;
     }
     
-    await addToCart(product.id, selectedOption, quantity);
-    navigate('/cart');
+    try {
+      await addToCart(product.id, selectedOption, quantity);
+      navigate('/cart');
+    } catch (error) {
+      // Error handled in CartContext
+    }
   };
 
   if (loading) {

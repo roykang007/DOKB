@@ -4,7 +4,7 @@ import { Search, Filter, ChevronDown, Star, ShoppingCart, ArrowRight } from 'luc
 import { supabase } from '../lib/supabase';
 import { useCart } from '../contexts/CartContext';
 import { formatPrice, cn } from '../lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 interface Product {
   id: string;
@@ -20,12 +20,34 @@ interface Product {
 }
 
 export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialCategory = searchParams.get('category') || 'all';
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
+  const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState('newest');
   const { addToCart } = useCart();
+
+  // Update URL when category changes
+  const handleCategoryChange = (newCategory: string) => {
+    setCategory(newCategory);
+    if (newCategory === 'all') {
+      searchParams.delete('category');
+    } else {
+      searchParams.set('category', newCategory);
+    }
+    setSearchParams(searchParams);
+  };
+
+  // Sync category state with URL search parameters
+  useEffect(() => {
+    const urlCategory = searchParams.get('category') || 'all';
+    if (urlCategory !== category) {
+      setCategory(urlCategory);
+    }
+  }, [searchParams]);
 
   const categories = [
     { id: 'all', label: lang === 'KOR' ? '전체' : 'All' },
@@ -126,7 +148,7 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
           {categories.map((cat) => (
             <button 
               key={cat.id}
-              onClick={() => setCategory(cat.id)}
+              onClick={() => handleCategoryChange(cat.id)}
               className={cn(
                 "px-6 py-2 rounded-full text-sm font-bold transition-all border",
                 category === cat.id 

@@ -21,12 +21,14 @@ interface CartContextType {
   cartCount: number;
   totalAmount: number;
   totalAmountUsd: number;
+  loading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -40,31 +42,84 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSessionId(sid);
   }, []);
 
-  // Listen for auth changes
+  // Listen for auth changes and handle migration
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id || null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const newUserId = session?.user?.id || null;
+      
+      // Migration logic: guest -> logged in
+      if (newUserId && !userId) {
+        const localCart = JSON.parse(localStorage.getItem('dokb_cart') || '[]');
+        if (localCart.length > 0) {
+          try {
+            for (const item of localCart) {
+              // Check if item already exists in Supabase
+              let query = supabase
+                .from('cart_items')
+                .select('id, quantity')
+                .eq('user_id', newUserId)
+                .eq('product_id', item.product_id);
+              
+              if (item.option_id) {
+                query = query.eq('option_id', item.option_id);
+              } else {
+                query = query.is('option_id', null);
+              }
+
+              const { data: existing } = await query.maybeSingle();
+
+              if (existing) {
+                await supabase
+                  .from('cart_items')
+                  .update({ quantity: existing.quantity + item.quantity })
+                  .eq('id', existing.id);
+              } else {
+                await supabase
+                  .from('cart_items')
+                  .insert([{ 
+                    user_id: newUserId, 
+                    product_id: item.product_id, 
+                    option_id: item.option_id, 
+                    quantity: item.quantity 
+                  }]);
+              }
+            }
+            localStorage.removeItem('dokb_cart');
+          } catch (error) {
+            console.error('Error migrating cart:', error);
+          }
+        }
+      }
+      
+      setUserId(newUserId);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [userId]);
 
   const fetchCart = useCallback(async () => {
-    if (userId) {
-      const { data, error } = await supabase
-        .from('cart_items')
-        .select(`
-          *,
-          product:products(*),
-          option:product_options(*)
-        `)
-        .eq('user_id', userId);
-      
-      if (!error && data) {
-        setCart(data);
+    setLoading(true);
+    try {
+      if (userId) {
+        const { data, error } = await supabase
+          .from('cart_items')
+          .select(`
+            *,
+            product:products(*),
+            option:product_options(*)
+          `)
+          .eq('user_id', userId);
+        
+        if (!error && data) {
+          setCart(data);
+        }
+      } else if (sessionId) {
+        const localCart = JSON.parse(localStorage.getItem('dokb_cart') || '[]');
+        setCart(localCart);
       }
-    } else if (sessionId) {
-      const localCart = JSON.parse(localStorage.getItem('dokb_cart') || '[]');
-      setCart(localCart);
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    } finally {
+      setLoading(false);
     }
   }, [userId, sessionId]);
 
@@ -120,10 +175,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       localStorage.setItem('dokb_cart', JSON.stringify(localCart));
       setCart([...localCart]);
+      setLoading(false);
       toast.success('장바구니에 담겼습니다 ✓');
       return;
     }
 
+    setLoading(true);
     // Optimistic UI for logged-in user
     const existingItem = cart.find(item => item.product_id === productId && item.option_id === optionId);
     if (existingItem) {
@@ -134,29 +191,50 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { data: existing } = await supabase
+      let query = supabase
         .from('cart_items')
         .select('id, quantity')
         .eq('user_id', userId)
-        .eq('product_id', productId)
-        .eq('option_id', optionId)
-        .single();
+        .eq('product_id', productId);
+      
+      if (optionId) {
+        query = query.eq('option_id', optionId);
+      } else {
+        query = query.is('option_id', null);
+      }
+
+      const { data: existing, error: existingError } = await query.maybeSingle();
+
+      if (existingError) {
+        console.error('Error checking existing cart item:', existingError);
+      }
 
       if (existing) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('cart_items')
           .update({ quantity: existing.quantity + quantity })
           .eq('id', existing.id);
+        if (updateError) throw updateError;
       } else {
-        await supabase
+        const { error: insertError } = await supabase
           .from('cart_items')
           .insert([{ user_id: userId, product_id: productId, option_id: optionId, quantity }]);
+        if (insertError) throw insertError;
       }
-    } catch (error) {
+      await fetchCart();
+      toast.success('장바구니에 담겼습니다 ✓');
+    } catch (error: any) {
       console.error('Error adding to cart:', error);
+      if (error.code === '42501') {
+        toast.error('데이터베이스 권한 오류(RLS)가 발생했습니다. 관리자 설정이 필요합니다.');
+      } else {
+        toast.error('장바구니 담기에 실패했습니다.');
+      }
       fetchCart(); // Rollback
+      throw error; // Re-throw to prevent navigation in handleBuyNow
+    } finally {
+      setLoading(false);
     }
-    toast.success('장바구니에 담겼습니다 ✓');
   };
 
   const removeFromCart = async (id: string) => {
@@ -228,7 +306,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearCart, 
       cartCount,
       totalAmount,
-      totalAmountUsd
+      totalAmountUsd,
+      loading
     }}>
       {children}
     </CartContext.Provider>
