@@ -10,17 +10,22 @@ import {
   ArrowLeft,
   Check,
   Trash2,
-  RefreshCcw
+  RefreshCcw,
+  LayoutDashboard,
+  Package,
+  ShoppingBag,
+  XCircle
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
 interface UserProfile {
   id: string;
   email: string;
   name_ko: string | null;
+  phone: string | null;
   role: 'customer' | 'b2b_buyer' | 'admin';
   created_at: string;
 }
@@ -83,7 +88,7 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) 
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, name_ko, role, created_at')
+        .select('id, email, name_ko, phone, role, created_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -139,23 +144,27 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) 
   return (
     <div className="pt-32 pb-20 min-h-screen bg-gray-50">
       <div className="container mx-auto px-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate('/admin/products')}
-              className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-primary hover:shadow-md transition-all"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-            <div>
-              <h1 className="text-4xl font-serif font-bold text-primary mb-2">
-                {lang === 'KOR' ? '회원 권한 관리' : lang === 'ENG' ? 'User Role Management' : '用户角色管理'}
-              </h1>
-              <p className="text-gray-500">
-                {lang === 'KOR' ? 'DOKB 회원들의 등급과 권한을 관리하세요' : lang === 'ENG' ? 'Manage grades and permissions of DOKB members' : '管理 DOKB 会员的等级和权限'}
-              </p>
+        {/* Admin Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
+          <div>
+            <div className="flex items-center gap-2 text-accent-teal mb-2">
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-widest">{lang === 'KOR' ? '관리자 대시보드' : 'Admin Dashboard'}</span>
             </div>
+            <h1 className="text-4xl font-serif font-bold text-primary">
+              {lang === 'KOR' ? '회원 관리' : lang === 'ENG' ? 'User Management' : '用户管理'}
+            </h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <Link to="/admin/products" className="px-6 py-3 rounded-xl bg-white border border-gray-200 text-primary font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              {lang === 'KOR' ? '상품 관리' : 'Products'}
+            </Link>
+            <Link to="/admin/orders" className="px-6 py-3 rounded-xl bg-white border border-gray-200 text-primary font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              {lang === 'KOR' ? '주문 관리' : 'Orders'}
+            </Link>
           </div>
         </div>
 
@@ -232,7 +241,10 @@ export const AdminUsers: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) 
                           </div>
                           <div>
                             <p className="font-bold text-primary">{user.name_ko || (lang === 'KOR' ? '이름 없음' : lang === 'ENG' ? 'No Name' : '无姓名')}</p>
-                            <p className="text-sm text-gray-400">{user.email}</p>
+                            <div className="flex flex-col gap-0.5 mt-0.5">
+                              <p className="text-sm text-gray-400">{user.email}</p>
+                              {user.phone && <p className="text-xs text-accent-teal font-medium">{user.phone}</p>}
+                            </div>
                           </div>
                         </div>
                       </td>

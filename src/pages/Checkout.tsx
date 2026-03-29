@@ -66,6 +66,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) =>
     email: '',
     phone: '',
     address: '',
+    addressDetail: '',
     city: '',
     country: lang === 'KOR' ? 'South Korea' : lang === 'ENG' ? 'USA' : 'China',
     postalCode: '',
@@ -73,16 +74,48 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) =>
   });
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        setShippingData(prev => ({
-          ...prev,
-          email: prev.email || user.email || '',
-          name: prev.name || user.user_metadata?.full_name || ''
-        }));
+        
+        // Fetch saved shipping info from 'users' table
+        try {
+          const { data: profile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('auth_id', user.id)
+            .maybeSingle();
+
+          if (profile && !error) {
+            setShippingData(prev => {
+              const displayName = profile.name_ko || profile.shipping_name || profile.name_en || profile.name_zh || user.user_metadata?.full_name || prev.name || '';
+              return {
+                ...prev,
+                email: user.email || '',
+                name: displayName,
+                phone: profile.shipping_phone || profile.phone || prev.phone || '',
+                address: profile.shipping_address || prev.address || '',
+                addressDetail: profile.shipping_address_detail || prev.addressDetail || '',
+                city: profile.shipping_city || prev.city || '',
+                country: profile.shipping_country || prev.country,
+                postalCode: profile.shipping_zipcode || prev.postalCode || ''
+              };
+            });
+          } else {
+            setShippingData(prev => ({
+              ...prev,
+              email: user.email || '',
+              name: user.user_metadata?.full_name || prev.name || ''
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
       }
-    });
+    };
+    
+    fetchUserData();
   }, []);
 
   useEffect(() => {
@@ -123,12 +156,14 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) =>
           shipping_fee: totalShippingFee,
           currency: lang === 'KOR' ? 'KRW' : lang === 'ENG' ? 'USD' : 'USD',
           status: 'paid', // Test version: Directly set to paid
-          shipping_address: `${shippingData.address}${shippingData.city ? ', ' + shippingData.city : ''}`,
+          shipping_address: `${shippingData.address}${shippingData.addressDetail ? ' ' + shippingData.addressDetail : ''}${shippingData.city ? ', ' + shippingData.city : ''}`,
+          shipping_address1: shippingData.address,
+          shipping_address2: shippingData.addressDetail || null,
           shipping_zipcode: shippingData.postalCode,
           shipping_country: shippingData.country,
           shipping_name: shippingData.name,
           shipping_phone: shippingData.phone,
-          payment_method: 'test_payment' // Test version: Use generic test method
+          payment_method: 'test' // Use 'test' for test orders
         }])
         .select()
         .single();
@@ -179,7 +214,27 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) =>
       // 4. Simulate a very brief processing for UX
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // 5. Success
+      // 5. Update User's Default Shipping Info for next time
+      if (user) {
+        try {
+          await supabase
+            .from('users')
+            .update({
+              shipping_name: shippingData.name,
+              shipping_phone: shippingData.phone,
+              shipping_address: shippingData.address,
+              shipping_address_detail: shippingData.addressDetail,
+              shipping_city: shippingData.city,
+              shipping_country: shippingData.country,
+              shipping_zipcode: shippingData.postalCode
+            })
+            .eq('auth_id', user.id);
+        } catch (err) {
+          console.warn('Failed to update user shipping info:', err);
+        }
+      }
+
+      // 6. Success
       clearCart();
       setStep('confirmation');
       toast.success(lang === 'KOR' ? '주문이 완료되었습니다! (테스트 결제 완료)' : lang === 'ENG' ? 'Order completed successfully! (Test Payment Successful)' : '订单已完成！（测试支付成功）');
@@ -369,9 +424,17 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) =>
                         <input 
                           required
                           type="text" 
+                          placeholder={lang === 'KOR' ? '기본 주소' : 'Street Address'}
                           value={shippingData.address}
                           onChange={e => setShippingData({...shippingData, address: e.target.value})}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 outline-none focus:border-accent-teal transition-all text-white" 
+                        />
+                        <input 
+                          type="text" 
+                          placeholder={lang === 'KOR' ? '상세 주소 (동, 호수 등)' : 'Detailed Address (Apt, Suite, etc.)'}
+                          value={shippingData.addressDetail}
+                          onChange={e => setShippingData({...shippingData, addressDetail: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 outline-none focus:border-accent-teal transition-all text-white mt-2" 
                         />
                       </div>
 
@@ -379,7 +442,6 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) =>
                         <div className="space-y-2">
                           <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '도시' : lang === 'ENG' ? 'City' : '城市'}</label>
                           <input 
-                            required
                             type="text" 
                             value={shippingData.city}
                             onChange={e => setShippingData({...shippingData, city: e.target.value})}
@@ -442,7 +504,13 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) =>
                             </div>
                             <div>
                               <p className="text-gray-500">{lang === 'KOR' ? '주소' : lang === 'ENG' ? 'Address' : '地址'}</p>
-                              <p className="text-white font-medium">{shippingData.address}, {shippingData.city}, {shippingData.country} ({shippingData.postalCode})</p>
+                              <p className="text-white font-medium">
+                                {shippingData.address}
+                                {shippingData.addressDetail ? ` ${shippingData.addressDetail}` : ''}
+                                {shippingData.city ? `, ${shippingData.city}` : ''}
+                                {!['South Korea', 'Korea', '대한민국', '한국'].includes(shippingData.country) && `, ${shippingData.country}`}
+                                {` (${shippingData.postalCode})`}
+                              </p>
                             </div>
                           </div>
                         </div>

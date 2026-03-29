@@ -148,6 +148,8 @@ export interface Database {
           shipping_name: string
           shipping_phone: string
           shipping_address: string
+          shipping_address1: string
+          shipping_address2: string | null
           shipping_zipcode: string
           shipping_country: string
           shipping_fee: number
@@ -168,6 +170,8 @@ export interface Database {
           shipping_name: string
           shipping_phone: string
           shipping_address: string
+          shipping_address1: string
+          shipping_address2?: string | null
           shipping_zipcode: string
           shipping_country: string
           shipping_fee: number
@@ -186,9 +190,10 @@ export interface Database {
           total_amount_usd?: number
           currency?: 'KRW' | 'USD'
           shipping_name?: string
-          shipping_phone?: string
-          shipping_address?: string
-          shipping_zipcode?: string
+          shipping_address: string
+          shipping_address1?: string
+          shipping_address2?: string | null
+          shipping_zipcode: string
           shipping_country?: string
           shipping_fee?: number
           payment_method?: string

@@ -114,9 +114,14 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
 
   if (isAdmin) {
     navItems.push({ 
-      key: 'admin', 
-      label: lang === 'KOR' ? '관리자모드' : 'Admin', 
+      key: 'admin-products', 
+      label: lang === 'KOR' ? '상품관리' : lang === 'ENG' ? 'Products' : '产品管理', 
       path: '/admin/products' 
+    });
+    navItems.push({ 
+      key: 'admin-orders', 
+      label: lang === 'KOR' ? '주문관리' : lang === 'ENG' ? 'Orders' : '订单管理', 
+      path: '/admin/orders' 
     });
   }
 

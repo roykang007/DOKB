@@ -19,6 +19,8 @@ import {
   Upload,
   X,
   Info,
+  Truck,
+  Star,
   ChevronRight,
   ChevronLeft,
   Save,
@@ -27,14 +29,25 @@ import {
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatPrice, cn } from '../lib/utils';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 interface Product {
   id: string;
   name_ko: string;
   name_en: string;
+  name_zh: string;
   description_ko: string;
   description_en: string;
+  description_zh: string;
+  details_ko?: string;
+  details_en?: string;
+  details_zh?: string;
+  shipping_info_ko?: string;
+  shipping_info_en?: string;
+  shipping_info_zh?: string;
+  review_info_ko?: string;
+  review_info_en?: string;
+  review_info_zh?: string;
   price: number;
   price_usd: number;
   thumbnail: string;
@@ -81,8 +94,19 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang 
   const [formData, setFormData] = useState<Partial<Product>>({
     name_ko: '',
     name_en: '',
+    name_zh: '',
     description_ko: '',
     description_en: '',
+    description_zh: '',
+    details_ko: '',
+    details_en: '',
+    details_zh: '',
+    shipping_info_ko: '',
+    shipping_info_en: '',
+    shipping_info_zh: '',
+    review_info_ko: '',
+    review_info_en: '',
+    review_info_zh: '',
     price: 0,
     price_usd: 0,
     category: 'beauty',
@@ -442,8 +466,19 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang 
     setFormData({
       name_ko: '',
       name_en: '',
+      name_zh: '',
       description_ko: '',
       description_en: '',
+      description_zh: '',
+      details_ko: '',
+      details_en: '',
+      details_zh: '',
+      shipping_info_ko: '',
+      shipping_info_en: '',
+      shipping_info_zh: '',
+      review_info_ko: '',
+      review_info_en: '',
+      review_info_zh: '',
       price: 0,
       price_usd: 0,
       category: 'beauty',
@@ -503,16 +538,29 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang 
   return (
     <div className="pt-32 pb-20 min-h-screen bg-gray-50">
       <div className="container mx-auto px-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+        {/* Admin Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-4xl font-serif font-bold text-primary mb-2">
+            <div className="flex items-center gap-2 text-accent-teal mb-2">
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-widest">{lang === 'KOR' ? '관리자 대시보드' : 'Admin Dashboard'}</span>
+            </div>
+            <h1 className="text-4xl font-serif font-bold text-primary">
               {lang === 'KOR' ? '상품 관리' : lang === 'ENG' ? 'Product Management' : '产品管理'}
             </h1>
-            <p className="text-gray-500">
-              {lang === 'KOR' ? '도깨비몰의 상품 카탈로그를 관리하세요' : lang === 'ENG' ? 'Manage your DOKB Mall product catalog' : '管理您的 DOKB Mall 产品目录'}
-            </p>
           </div>
+          
+          <div className="flex items-center gap-4">
+            <Link to="/admin/orders" className="px-6 py-3 rounded-xl bg-white border border-gray-200 text-primary font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              {lang === 'KOR' ? '주문 관리' : 'Orders'}
+            </Link>
+            <Link to="/admin/users" className="px-6 py-3 rounded-xl bg-white border border-gray-200 text-primary font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              {lang === 'KOR' ? '회원 관리' : 'Users'}
+            </Link>
+          </div>
+
           <div className="flex flex-wrap gap-4">
             <button 
               onClick={() => navigate('/admin/users')}
@@ -750,6 +798,16 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang 
                             type="text" 
                             value={formData.name_en}
                             onChange={e => setFormData({...formData, name_en: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '상품명 (중문)' : lang === 'ENG' ? 'Product Name (ZH)' : '产品名称 (中文)'}</label>
+                          <input 
+                            required
+                            type="text" 
+                            value={formData.name_zh}
+                            onChange={e => setFormData({...formData, name_zh: e.target.value})}
                             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all text-primary" 
                           />
                         </div>
@@ -1020,7 +1078,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang 
                         <div className="space-y-2">
                           <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '설명 (국문)' : lang === 'ENG' ? 'Description (KR)' : '说明 (韩文)'}</label>
                           <textarea 
-                            rows={4}
+                            rows={2}
                             value={formData.description_ko}
                             onChange={e => setFormData({...formData, description_ko: e.target.value})}
                             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
@@ -1029,9 +1087,129 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang 
                         <div className="space-y-2">
                           <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '설명 (영문)' : lang === 'ENG' ? 'Description (EN)' : '说明 (英文)'}</label>
                           <textarea 
-                            rows={4}
+                            rows={2}
                             value={formData.description_en}
                             onChange={e => setFormData({...formData, description_en: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '설명 (중문)' : lang === 'ENG' ? 'Description (ZH)' : '说明 (中文)'}</label>
+                          <textarea 
+                            rows={2}
+                            value={formData.description_zh}
+                            onChange={e => setFormData({...formData, description_zh: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Detailed Information */}
+                    <section className="space-y-6">
+                      <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+                        <Info className="w-5 h-5 text-accent-teal" />
+                        {lang === 'KOR' ? '상세 정보' : lang === 'ENG' ? 'Product Details' : '产品详情'}
+                      </h3>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '상세 정보 (국문)' : lang === 'ENG' ? 'Details (KR)' : '详情 (韩文)'}</label>
+                          <textarea 
+                            rows={6}
+                            value={formData.details_ko}
+                            onChange={e => setFormData({...formData, details_ko: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '상세 정보 (영문)' : lang === 'ENG' ? 'Details (EN)' : '详情 (英文)'}</label>
+                          <textarea 
+                            rows={6}
+                            value={formData.details_en}
+                            onChange={e => setFormData({...formData, details_en: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '상세 정보 (중문)' : lang === 'ENG' ? 'Details (ZH)' : '详情 (中文)'}</label>
+                          <textarea 
+                            rows={6}
+                            value={formData.details_zh}
+                            onChange={e => setFormData({...formData, details_zh: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Shipping & Returns */}
+                    <section className="space-y-6">
+                      <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+                        <Truck className="w-5 h-5 text-accent-teal" />
+                        {lang === 'KOR' ? '배송/교환/반품' : lang === 'ENG' ? 'Shipping & Returns' : '配送/换货/退货'}
+                      </h3>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '배송 정보 (국문)' : lang === 'ENG' ? 'Shipping Info (KR)' : '配送信息 (韩文)'}</label>
+                          <textarea 
+                            rows={4}
+                            value={formData.shipping_info_ko}
+                            onChange={e => setFormData({...formData, shipping_info_ko: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '배송 정보 (영문)' : lang === 'ENG' ? 'Shipping Info (EN)' : '配送信息 (英文)'}</label>
+                          <textarea 
+                            rows={4}
+                            value={formData.shipping_info_en}
+                            onChange={e => setFormData({...formData, shipping_info_en: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '배송 정보 (중문)' : lang === 'ENG' ? 'Shipping Info (ZH)' : '配送信息 (中文)'}</label>
+                          <textarea 
+                            rows={4}
+                            value={formData.shipping_info_zh}
+                            onChange={e => setFormData({...formData, shipping_info_zh: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Review Information */}
+                    <section className="space-y-6">
+                      <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+                        <Star className="w-5 h-5 text-accent-teal" />
+                        {lang === 'KOR' ? '리뷰 정보' : lang === 'ENG' ? 'Review Info' : '评论信息'}
+                      </h3>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '리뷰 안내 (국문)' : lang === 'ENG' ? 'Review Info (KR)' : '评论指南 (韩文)'}</label>
+                          <textarea 
+                            rows={4}
+                            value={formData.review_info_ko}
+                            onChange={e => setFormData({...formData, review_info_ko: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '리뷰 안내 (영문)' : lang === 'ENG' ? 'Review Info (EN)' : '评论指南 (英文)'}</label>
+                          <textarea 
+                            rows={4}
+                            value={formData.review_info_en}
+                            onChange={e => setFormData({...formData, review_info_en: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '리뷰 안내 (중문)' : lang === 'ENG' ? 'Review Info (ZH)' : '评论指南 (中文)'}</label>
+                          <textarea 
+                            rows={4}
+                            value={formData.review_info_zh}
+                            onChange={e => setFormData({...formData, review_info_zh: e.target.value})}
                             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all resize-none text-primary" 
                           />
                         </div>
