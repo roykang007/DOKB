@@ -20,6 +20,7 @@ import { OrderHistory } from './pages/OrderHistory';
 import { AdminProducts } from './pages/AdminProducts';
 import { AdminUsers } from './pages/AdminUsers';
 import { AdminOrders } from './pages/AdminOrders';
+import { AdminSettings } from './pages/AdminSettings';
 
 const ProtectedRoute = ({ user, children, requireAdmin = false }: { user: any, children: React.ReactNode, requireAdmin?: boolean }) => {
   const navigate = useNavigate();
@@ -402,6 +403,11 @@ export default function App() {
             <Route path="/admin/orders" element={
               <ProtectedRoute user={user} requireAdmin>
                 <AdminOrders lang={lang} />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/settings" element={
+              <ProtectedRoute user={user} requireAdmin>
+                <AdminSettings />
               </ProtectedRoute>
             } />
           </Routes>

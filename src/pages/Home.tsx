@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -15,6 +16,7 @@ import {
   Mail,
   User
 } from 'lucide-react';
+import { HERO_IMAGES } from '../constants/images';
 
 const DokkaebiClubIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -33,6 +35,27 @@ interface HomeProps {
 
 export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatus, handleFormSubmit, setIsContactModalOpen }) => {
   const navigate = useNavigate();
+  const [heroImages, setHeroImages] = React.useState(HERO_IMAGES);
+
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('site_settings')
+          .select('value')
+          .eq('key', 'hero_images')
+          .maybeSingle();
+        
+        if (data && data.value) {
+          setHeroImages(data.value);
+        }
+      } catch (error) {
+        console.error('Error fetching hero images:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const t = {
     hero: {
       title: lang === 'KOR' ? '뚝딱! 최고의 K-상품을 찾아드립니다' : lang === 'ENG' ? 'Korean Quality, Magic Delivered' : '韩流品质，魔力送达',
@@ -161,7 +184,7 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
               {/* Character Image */}
               <div className="relative z-10 w-full h-full dokkaebi-fire">
                 <img 
-                  src="https://picsum.photos/seed/dokkaebi-hero/1000/1000" 
+                  src={heroImages.mainMascot} 
                   alt="DOKB Mascot" 
                   className="w-full h-full object-cover rounded-[2.5rem] lg:rounded-[4rem] shadow-[0_0_50px_rgba(0,201,177,0.3)] border-4 border-accent-teal/20"
                   referrerPolicy="no-referrer"
@@ -187,9 +210,9 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
               {/* Floating Product Cards */}
               <AnimatePresence>
                 {[
-                  { id: 'beauty', img: 'https://picsum.photos/seed/kbeauty-hero/200/200', label: 'K-Beauty', color: 'bg-accent-teal', delay: 0, x: -80, y: -60, lgX: -120, lgY: -80 },
-                  { id: 'food', img: 'https://picsum.photos/seed/kfood-hero/200/200', label: 'K-Food', color: 'bg-highlight-red', delay: 0.5, x: 100, y: 80, lgX: 140, lgY: 100 },
-                  { id: 'lifestyle', img: 'https://picsum.photos/seed/lifestyle-hero/200/200', label: 'Lifestyle', color: 'bg-accent-gold', delay: 1, x: -60, y: 100, lgX: -100, lgY: 140 }
+                  { id: 'beauty', img: heroImages.categories.beauty, label: 'K-Beauty', color: 'bg-accent-teal', delay: 0, x: -80, y: -60, lgX: -120, lgY: -80 },
+                  { id: 'food', img: heroImages.categories.food, label: 'K-Food', color: 'bg-highlight-red', delay: 0.5, x: 100, y: 80, lgX: 140, lgY: 100 },
+                  { id: 'lifestyle', img: heroImages.categories.lifestyle, label: 'Lifestyle', color: 'bg-accent-gold', delay: 1, x: -60, y: 100, lgX: -100, lgY: 140 }
                 ].map((card) => (
                   <motion.div
                     key={card.id}

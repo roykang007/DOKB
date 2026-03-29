@@ -123,6 +123,11 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
       label: lang === 'KOR' ? '주문관리' : lang === 'ENG' ? 'Orders' : '订单管理', 
       path: '/admin/orders' 
     });
+    navItems.push({ 
+      key: 'admin-settings', 
+      label: lang === 'KOR' ? '설정' : lang === 'ENG' ? 'Settings' : '设置', 
+      path: '/admin/settings' 
+    });
   }
 
   return (
