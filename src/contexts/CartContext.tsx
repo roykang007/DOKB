@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { toast } from 'sonner';
 
 interface CartItem {
@@ -44,6 +44,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Listen for auth changes and handle migration
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const newUserId = session?.user?.id || null;
       
@@ -97,6 +99,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [userId]);
 
   const fetchCart = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      const localCart = JSON.parse(localStorage.getItem('dokb_cart') || '[]');
+      setCart(localCart);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       if (userId) {
@@ -125,7 +134,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Real-time subscription for cart_items
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !isSupabaseConfigured) return;
 
     const channel = supabase
       .channel(`cart_user_${userId}`)
@@ -191,6 +200,26 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      // Ensure user profile exists before adding to cart to avoid foreign key errors
+      const { data: profile } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (!profile) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          await supabase.from('users').insert([{
+            id: authUser.id,
+            auth_id: authUser.id,
+            email: authUser.email,
+            role: 'customer',
+            name_ko: authUser.email?.split('@')[0] || 'User'
+          }]);
+        }
+      }
+
       let query = supabase
         .from('cart_items')
         .select('id, quantity')

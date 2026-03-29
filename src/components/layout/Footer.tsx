@@ -2,7 +2,7 @@ import React from 'react';
 import { Instagram, Linkedin, Youtube, Mail } from 'lucide-react';
 
 interface FooterProps {
-  lang: 'KOR' | 'ENG';
+  lang: 'KOR' | 'ENG' | 'CHI';
 }
 
 export const Footer: React.FC<FooterProps> = ({ lang }) => {
@@ -17,7 +17,9 @@ export const Footer: React.FC<FooterProps> = ({ lang }) => {
             <p className="text-gray-400 max-w-md mb-8 leading-relaxed">
               {lang === 'KOR' 
                 ? '도깨비몰은 한국의 우수한 상품을 전 세계에 알리고 연결하는 글로벌 이커머스 플랫폼입니다. (주)코라트레이드가 운영합니다.'
-                : 'DOKB Mall is a global e-commerce platform that promotes and connects excellent Korean products to the world. Operated by Cora Trade Co., Ltd.'}
+                : lang === 'ENG'
+                ? 'DOKB Mall is a global e-commerce platform that promotes and connects excellent Korean products to the world. Operated by Cora Trade Co., Ltd.'
+                : 'DOKB Mall 是一个全球电子商务平台，致力于向世界推广和连接韩国的优秀产品。由 Cora Trade Co., Ltd. 运营。'}
             </p>
             <div className="flex gap-4">
               {[Instagram, Linkedin, Youtube, Mail].map((Icon, i) => (
@@ -28,16 +30,16 @@ export const Footer: React.FC<FooterProps> = ({ lang }) => {
             </div>
           </div>
           <div>
-            <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-sm">{lang === 'KOR' ? '고객지원' : 'Support'}</h4>
+            <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-sm">{lang === 'KOR' ? '고객지원' : lang === 'ENG' ? 'Support' : '客户支持'}</h4>
             <ul className="space-y-4 text-gray-400 text-sm">
-              <li><a href="#" className="hover:text-accent-gold transition-colors">{lang === 'KOR' ? '이용약관' : 'Terms of Service'}</a></li>
-              <li><a href="#" className="hover:text-accent-gold transition-colors">{lang === 'KOR' ? '개인정보처리방침' : 'Privacy Policy'}</a></li>
-              <li><a href="#" className="hover:text-accent-gold transition-colors">{lang === 'KOR' ? '배송안내' : 'Shipping Info'}</a></li>
-              <li><a href="#" className="hover:text-accent-gold transition-colors">{lang === 'KOR' ? 'FAQ' : 'FAQ'}</a></li>
+              <li><a href="#" className="hover:text-accent-gold transition-colors">{lang === 'KOR' ? '이용약관' : lang === 'ENG' ? 'Terms of Service' : '服务条款'}</a></li>
+              <li><a href="#" className="hover:text-accent-gold transition-colors">{lang === 'KOR' ? '개인정보처리방침' : lang === 'ENG' ? 'Privacy Policy' : '隐私政策'}</a></li>
+              <li><a href="#" className="hover:text-accent-gold transition-colors">{lang === 'KOR' ? '배송안내' : lang === 'ENG' ? 'Shipping Info' : '配送信息'}</a></li>
+              <li><a href="#" className="hover:text-accent-gold transition-colors">{lang === 'KOR' ? 'FAQ' : lang === 'ENG' ? 'FAQ' : '常见问题'}</a></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-sm">{lang === 'KOR' ? '회사정보' : 'Company'}</h4>
+            <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-sm">{lang === 'KOR' ? '회사정보' : lang === 'ENG' ? 'Company' : '公司信息'}</h4>
             <ul className="space-y-4 text-gray-400 text-sm">
               <li>(주)코라트레이드 | Cora Trade Co., Ltd.</li>
               <li>CEO: Roy Kang</li>

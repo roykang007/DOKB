@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Package, ChevronRight, ShoppingBag, ArrowRight, Clock, CheckCircle2, Truck, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatPrice, cn } from '../lib/utils';
+import { useCart } from '../contexts/CartContext';
 import { toast } from 'sonner';
 
 interface OrderItem {
@@ -27,18 +28,21 @@ interface Order {
   order_items: OrderItem[];
 }
 
-export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
+export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) => {
+  const { dbUserId } = useCart();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrders = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error(lang === 'KOR' ? '로그인이 필요합니다.' : 'Login required.');
-        navigate('/');
+      if (!dbUserId) {
+        // If not logged in, or dbUserId not yet available
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error(lang === 'KOR' ? '로그인이 필요합니다.' : lang === 'ENG' ? 'Login required.' : '需要登录。');
+          navigate('/');
+        }
         return;
       }
 
@@ -52,7 +56,7 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             product:products (*)
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', dbUserId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -64,7 +68,7 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
     };
 
     fetchOrders();
-  }, [lang, navigate]);
+  }, [lang, navigate, dbUserId]);
 
   const getStatusIcon = (status: Order['status']) => {
     switch (status) {
@@ -79,11 +83,11 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
   const getStatusLabel = (status: Order['status']) => {
     const labels = {
-      pending: lang === 'KOR' ? '결제 대기' : 'Pending',
-      paid: lang === 'KOR' ? '결제 완료' : 'Paid',
-      shipped: lang === 'KOR' ? '배송 중' : 'Shipped',
-      delivered: lang === 'KOR' ? '배송 완료' : 'Delivered',
-      cancelled: lang === 'KOR' ? '주문 취소' : 'Cancelled'
+      pending: lang === 'KOR' ? '결제 대기' : lang === 'ENG' ? 'Pending' : '待支付',
+      paid: lang === 'KOR' ? '결제 완료' : lang === 'ENG' ? 'Paid' : '已支付',
+      shipped: lang === 'KOR' ? '배송 중' : lang === 'ENG' ? 'Shipped' : '已发货',
+      delivered: lang === 'KOR' ? '배송 완료' : lang === 'ENG' ? 'Delivered' : '已送达',
+      cancelled: lang === 'KOR' ? '주문 취소' : lang === 'ENG' ? 'Cancelled' : '已取消'
     };
     return labels[status];
   };
@@ -104,16 +108,16 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             <Package className="w-12 h-12 text-gray-600" />
           </div>
           <h1 className="text-3xl font-serif font-bold text-white mb-4">
-            {lang === 'KOR' ? '주문 내역이 없습니다' : 'No order history'}
+            {lang === 'KOR' ? '주문 내역이 없습니다' : lang === 'ENG' ? 'No order history' : '暂无订单历史'}
           </h1>
           <p className="text-gray-500 mb-12 max-w-md mx-auto">
-            {lang === 'KOR' ? '도깨비몰의 마법 같은 상품들을 만나보세요!' : 'Meet the magical products of DOKB Mall!'}
+            {lang === 'KOR' ? '도깨비몰의 마법 같은 상품들을 만나보세요!' : lang === 'ENG' ? 'Meet the magical products of DOKB Mall!' : '遇见 DOKB Mall 的神奇产品！'}
           </p>
           <Link 
             to="/products" 
             className="inline-flex items-center gap-2 bg-accent-gold text-primary px-10 py-4 rounded-full font-bold hover:brightness-110 transition-all"
           >
-            {lang === 'KOR' ? '상품 보러 가기' : 'View Products'}
+            {lang === 'KOR' ? '상품 보러 가기' : lang === 'ENG' ? 'View Products' : '查看产品'}
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -126,7 +130,7 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       <div className="container mx-auto px-6">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-white mb-12">
-            {lang === 'KOR' ? '주문 내역' : 'Order History'}
+            {lang === 'KOR' ? '주문 내역' : lang === 'ENG' ? 'Order History' : '订单历史'}
           </h1>
 
           <div className="space-y-8">
@@ -142,11 +146,11 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 <div className="bg-white/5 p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex gap-8">
                     <div>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{lang === 'KOR' ? '주문 날짜' : 'Order Date'}</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{lang === 'KOR' ? '주문 날짜' : lang === 'ENG' ? 'Order Date' : '订单日期'}</p>
                       <p className="text-sm font-bold text-white">{new Date(order.created_at).toLocaleDateString()}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{lang === 'KOR' ? '주문 번호' : 'Order ID'}</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{lang === 'KOR' ? '주문 번호' : lang === 'ENG' ? 'Order ID' : '订单 ID'}</p>
                       <p className="text-sm font-bold text-white uppercase">{order.id.slice(0, 8)}</p>
                     </div>
                   </div>
@@ -189,7 +193,7 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
                 {/* Order Footer */}
                 <div className="p-6 bg-white/5 border-t border-white/10 flex justify-between items-center">
-                  <span className="text-sm font-bold text-gray-400">{lang === 'KOR' ? '총 결제 금액' : 'Total Amount'}</span>
+                  <span className="text-sm font-bold text-gray-400">{lang === 'KOR' ? '총 결제 금액' : lang === 'ENG' ? 'Total Amount' : '总金额'}</span>
                   <span className="text-2xl font-serif font-bold text-accent-gold">
                     {lang === 'KOR' ? formatPrice(order.total_amount, 'KRW') : formatPrice(order.total_amount_usd, 'USD')}
                   </span>

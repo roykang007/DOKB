@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Star, ShoppingCart, ArrowRight, ChevronLeft, ChevronRight, Heart, Share2, Info, Truck, ShieldCheck, RefreshCcw } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useCart } from '../contexts/CartContext';
 import { formatPrice, cn } from '../lib/utils';
 import { toast } from 'sonner';
@@ -15,6 +15,9 @@ interface Product {
   description_en: string;
   price: number;
   price_usd: number;
+  original_price: number | null;
+  discount_rate: number | null;
+  shipping_fee: number | null;
   thumbnail: string;
   images: string[];
   category: string;
@@ -33,7 +36,7 @@ interface ProductOption {
   stock_quantity: number;
 }
 
-export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
+export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
@@ -45,8 +48,13 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
   const { addToCart } = useCart();
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchProduct = async () => {
       if (!id) return;
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       
       const { data: productData, error: productError } = await supabase
@@ -56,7 +64,7 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         .single();
 
       if (productError || !productData) {
-        toast.error(lang === 'KOR' ? '상품을 찾을 수 없습니다.' : 'Product not found.');
+        toast.error(lang === 'KOR' ? '상품을 찾을 수 없습니다.' : lang === 'ENG' ? 'Product not found.' : '未找到产品。');
         navigate('/products');
         return;
       }
@@ -72,6 +80,8 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
     };
 
     fetchProduct();
+
+    if (!isSupabaseConfigured) return;
 
     // Real-time subscription for product stock
     const channel = supabase
@@ -222,11 +232,35 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                     <Star key={i} className={cn("w-4 h-4", i < 4 ? "text-accent-gold fill-accent-gold" : "text-gray-600")} />
                   ))}
                 </div>
-                <span className="text-sm text-gray-400">4.8 (120 Reviews)</span>
+                <span className="text-sm text-gray-400">4.8 (120 {lang === 'KOR' ? '리뷰' : lang === 'ENG' ? 'Reviews' : '评论'})</span>
               </div>
 
-              <div className="text-3xl lg:text-4xl font-serif font-bold text-accent-gold">
-                {lang === 'KOR' ? formatPrice(currentPrice, 'KRW') : formatPrice(currentPriceUsd, 'USD')}
+              <div className="space-y-1">
+                {product.original_price && product.original_price > product.price && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 line-through">
+                      {lang === 'KOR' ? formatPrice(product.original_price, 'KRW') : formatPrice(product.original_price / 1300, 'USD')}
+                    </span>
+                    {product.discount_rate && (
+                      <span className="text-sm font-bold text-highlight-red">
+                        {product.discount_rate}%
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="text-3xl lg:text-4xl font-serif font-bold text-accent-gold">
+                  {lang === 'KOR' ? formatPrice(currentPrice, 'KRW') : formatPrice(currentPriceUsd, 'USD')}
+                </div>
+                
+                {/* Shipping Fee */}
+                <div className="flex items-center gap-2 pt-2 text-sm text-gray-400">
+                  <span className="font-bold">{lang === 'KOR' ? '배송비' : lang === 'ENG' ? 'Shipping Fee' : '运费'}:</span>
+                  <span>
+                    {product.shipping_fee && product.shipping_fee > 0 
+                      ? (lang === 'KOR' ? formatPrice(product.shipping_fee, 'KRW') : formatPrice(product.shipping_fee / 1300, 'USD'))
+                      : (lang === 'KOR' ? '무료' : lang === 'ENG' ? 'Free' : '免费')}
+                  </span>
+                </div>
               </div>
 
               <p className="text-gray-400 leading-relaxed">
@@ -238,7 +272,7 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             {options.length > 0 && (
               <div className="space-y-4">
                 <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                  {lang === 'KOR' ? '옵션 선택' : 'Select Option'}
+                  {lang === 'KOR' ? '옵션 선택' : lang === 'ENG' ? 'Select Option' : '选择选项'}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {options.map((option) => (
@@ -269,7 +303,7 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             {/* Quantity */}
             <div className="space-y-4">
               <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                {lang === 'KOR' ? '수량' : 'Quantity'}
+                {lang === 'KOR' ? '수량' : lang === 'ENG' ? 'Quantity' : '数量'}
               </label>
               <div className="flex items-center gap-4">
                 <div className="flex items-center bg-white/5 border border-white/10 rounded-xl overflow-hidden">
@@ -292,10 +326,10 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                   product.stock_quantity < 10 ? "text-highlight-red" : "text-gray-500"
                 )}>
                   {product.stock_quantity <= 0 
-                    ? (lang === 'KOR' ? '품절' : 'Out of Stock')
+                    ? (lang === 'KOR' ? '품절' : lang === 'ENG' ? 'Out of Stock' : '缺货')
                     : product.stock_quantity < 10 
-                      ? (lang === 'KOR' ? `잔여 수량: ${product.stock_quantity}개` : `${product.stock_quantity} items left`)
-                      : (lang === 'KOR' ? `재고: ${product.stock_quantity}개` : `Stock: ${product.stock_quantity} units`)
+                      ? (lang === 'KOR' ? `잔여 수량: ${product.stock_quantity}개` : lang === 'ENG' ? `${product.stock_quantity} items left` : `仅剩 ${product.stock_quantity} 件`)
+                      : (lang === 'KOR' ? `재고: ${product.stock_quantity}개` : lang === 'ENG' ? `Stock: ${product.stock_quantity} units` : `库存: ${product.stock_quantity} 件`)
                   }
                 </span>
               </div>
@@ -309,7 +343,7 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 className="flex-1 bg-white/10 text-white py-5 rounded-2xl font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart className="w-5 h-5" />
-                {lang === 'KOR' ? '장바구니' : 'Add to Cart'}
+                {lang === 'KOR' ? '장바구니 담기' : lang === 'ENG' ? 'Add to Cart' : '加入购物车'}
               </button>
               <button 
                 onClick={handleBuyNow}
@@ -317,8 +351,8 @@ export const ProductDetail: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 className="flex-1 bg-accent-gold text-primary py-5 rounded-2xl font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-accent-gold/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {product.stock_quantity <= 0 
-                  ? (lang === 'KOR' ? '품절' : 'Sold Out')
-                  : (lang === 'KOR' ? '바로 구매' : 'Buy Now')
+                  ? (lang === 'KOR' ? '품절' : lang === 'ENG' ? 'Sold Out' : '已售罄')
+                  : (lang === 'KOR' ? '바로 구매하기' : lang === 'ENG' ? 'Buy Now' : '立即购买')
                 }
                 <ArrowRight className="w-5 h-5" />
               </button>

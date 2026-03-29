@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Filter, ChevronDown, Star, ShoppingCart, ArrowRight } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useCart } from '../contexts/CartContext';
 import { formatPrice, cn } from '../lib/utils';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -19,7 +19,7 @@ interface Product {
   stock_quantity: number;
 }
 
-export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
+export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'all';
   
@@ -50,45 +50,55 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
   }, [searchParams]);
 
   const categories = [
-    { id: 'all', label: lang === 'KOR' ? '전체' : 'All' },
-    { id: 'beauty', label: lang === 'KOR' ? 'K-뷰티' : 'K-Beauty' },
-    { id: 'food', label: lang === 'KOR' ? 'K-푸드' : 'K-Food' },
-    { id: 'lifestyle', label: lang === 'KOR' ? '생활용품' : 'Lifestyle' },
-    { id: 'dokb_brand', label: lang === 'KOR' ? 'DOKB 브랜드' : 'DOKB Brand' },
+    { id: 'all', label: lang === 'KOR' ? '전체' : lang === 'ENG' ? 'All' : '全部' },
+    { id: 'beauty', label: lang === 'KOR' ? 'K-뷰티' : lang === 'ENG' ? 'K-Beauty' : '韩国美容' },
+    { id: 'food', label: lang === 'KOR' ? 'K-푸드' : lang === 'ENG' ? 'K-Food' : '韩国食品' },
+    { id: 'lifestyle', label: lang === 'KOR' ? '생활용품' : lang === 'ENG' ? 'Lifestyle' : '生活方式' },
+    { id: 'dokb_brand', label: lang === 'KOR' ? 'DOKB 브랜드' : lang === 'ENG' ? 'DOKB Brand' : 'DOKB 品牌' },
   ];
 
   const sortOptions = [
-    { id: 'newest', label: lang === 'KOR' ? '신상품순' : 'Newest' },
-    { id: 'price_low', label: lang === 'KOR' ? '낮은가격순' : 'Price: Low to High' },
-    { id: 'price_high', label: lang === 'KOR' ? '높은가격순' : 'Price: High to Low' },
+    { id: 'newest', label: lang === 'KOR' ? '신상품순' : lang === 'ENG' ? 'Newest' : '最新' },
+    { id: 'price_low', label: lang === 'KOR' ? '낮은가격순' : lang === 'ENG' ? 'Price: Low to High' : '价格：从低到高' },
+    { id: 'price_high', label: lang === 'KOR' ? '높은가격순' : lang === 'ENG' ? 'Price: High to Low' : '价格：从高到低' },
   ];
 
   useEffect(() => {
     const fetchProducts = async () => {
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
-      let query = supabase.from('products').select('*').eq('is_active', true);
+      try {
+        let query = supabase.from('products').select('*').eq('is_active', true);
 
-      if (category !== 'all') {
-        query = query.eq('category', category);
-      }
+        if (category !== 'all') {
+          query = query.eq('category', category);
+        }
 
-      if (search) {
-        query = query.or(`name_ko.ilike.%${search}%,name_en.ilike.%${search}%`);
-      }
+        if (search) {
+          query = query.or(`name_ko.ilike.%${search}%,name_en.ilike.%${search}%`);
+        }
 
-      if (sort === 'price_low') {
-        query = query.order('price', { ascending: true });
-      } else if (sort === 'price_high') {
-        query = query.order('price', { ascending: false });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+        if (sort === 'price_low') {
+          query = query.order('price', { ascending: true });
+        } else if (sort === 'price_high') {
+          query = query.order('price', { ascending: false });
+        } else {
+          query = query.order('created_at', { ascending: false });
+        }
 
-      const { data, error } = await query;
-      if (!error && data) {
-        setProducts(data);
+        const { data, error } = await query;
+        if (!error && data) {
+          setProducts(data);
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchProducts();
@@ -100,10 +110,10 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
             <h1 className="text-4xl lg:text-6xl font-serif font-bold text-accent-gold mb-4">
-              {lang === 'KOR' ? '도깨비몰 상품관' : 'DOKB Collections'}
+              {lang === 'KOR' ? '도깨비몰 상품관' : lang === 'ENG' ? 'DOKB Collections' : 'DOKB 系列'}
             </h1>
             <p className="text-gray-400">
-              {lang === 'KOR' ? '엄선된 프리미엄 K-상품을 만나보세요' : 'Discover our curated premium K-products'}
+              {lang === 'KOR' ? '엄선된 프리미엄 K-상품을 만나보세요' : lang === 'ENG' ? 'Discover our curated premium K-products' : '发现我们精选的优质韩国产品'}
             </p>
           </div>
 
@@ -112,7 +122,7 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input 
                 type="text" 
-                placeholder={lang === 'KOR' ? '상품 검색...' : 'Search products...'}
+                placeholder={lang === 'KOR' ? '상품 검색...' : lang === 'ENG' ? 'Search products...' : '搜索产品...'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="bg-white/5 border border-white/10 rounded-full pl-12 pr-6 py-3 outline-none focus:border-accent-teal transition-all w-full sm:w-64"
@@ -181,27 +191,16 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 viewport={{ once: true }}
                 className="group"
               >
-                <div className="relative aspect-square rounded-3xl overflow-hidden mb-4 bg-white/5 border border-white/5">
+                <Link 
+                  to={`/products/${product.id}`}
+                  className="relative aspect-square rounded-3xl overflow-hidden mb-4 bg-white/5 border border-white/5 block"
+                >
                   <img 
                     src={(product.thumbnail && product.thumbnail.trim() !== "") ? product.thumbnail : 'https://picsum.photos/seed/product/400/400'} 
                     alt={lang === 'KOR' ? product.name_ko : product.name_en}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <Link 
-                      to={`/products/${product.id}`}
-                      className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-primary hover:bg-accent-teal hover:text-white transition-all"
-                    >
-                      <Search className="w-5 h-5" />
-                    </Link>
-                    <button 
-                      onClick={() => addToCart(product.id, null, 1)}
-                      className="w-12 h-12 bg-accent-gold rounded-full flex items-center justify-center text-primary hover:scale-110 transition-all"
-                    >
-                      <ShoppingCart className="w-5 h-5" />
-                    </button>
-                  </div>
                   {product.stock_quantity === 0 && (
                     <div className="absolute top-4 left-4 bg-highlight-red text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
                       Sold Out
@@ -212,7 +211,7 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                       New
                     </div>
                   )}
-                </div>
+                </Link>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-accent-teal uppercase tracking-widest">{product.brand}</span>
@@ -236,7 +235,7 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         ) : (
           <div className="text-center py-40">
             <p className="text-gray-500 text-xl">
-              {lang === 'KOR' ? '검색 결과가 없습니다.' : 'No products found.'}
+              {lang === 'KOR' ? '검색 결과가 없습니다.' : lang === 'ENG' ? 'No products found.' : '未找到产品。'}
             </p>
           </div>
         )}

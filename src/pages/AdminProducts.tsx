@@ -24,7 +24,7 @@ import {
   Save,
   Loader2
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { formatPrice, cn } from '../lib/utils';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +44,9 @@ interface Product {
   tags: string[];
   stock_quantity: number;
   is_active: boolean;
+  original_price: number | null;
+  discount_rate: number | null;
+  shipping_fee: number | null;
   created_at: string;
 }
 
@@ -57,7 +60,7 @@ interface ProductOption {
   stock_quantity: number;
 }
 
-export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
+export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -100,9 +103,14 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
   }, []);
 
   const checkAdmin = async () => {
+    if (!isSupabaseConfigured) {
+      setIsAdmin(false);
+      return;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error(lang === 'KOR' ? '로그인이 필요합니다.' : 'Login required.');
+      toast.error(lang === 'KOR' ? '로그인이 필요합니다.' : lang === 'ENG' ? 'Login required.' : '需要登录。');
       navigate('/');
       setIsAdmin(false);
       return;
@@ -126,7 +134,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
     const isMainAdmin = user.email === 'admin@dokbmall.com';
 
     if (!isMainAdmin && (error || userData?.role !== 'admin')) {
-      toast.error(lang === 'KOR' ? '관리자 권한이 없습니다.' : 'Admin access denied.');
+      toast.error(lang === 'KOR' ? '관리자 권한이 없습니다.' : lang === 'ENG' ? 'Admin access denied.' : '拒绝访问管理员。');
       navigate('/');
       setIsAdmin(false);
       return;
@@ -178,14 +186,14 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       
       if (error) throw error;
       setProducts(products.map(p => p.id === id ? { ...p, is_active: !currentStatus } : p));
-      toast.success(lang === 'KOR' ? '상태가 변경되었습니다.' : 'Status updated.');
+      toast.success(lang === 'KOR' ? '상태가 변경되었습니다.' : lang === 'ENG' ? 'Status updated.' : '状态已更新。');
     } catch (error: any) {
       toast.error(error.message);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(lang === 'KOR' ? '정말 삭제하시겠습니까?' : 'Are you sure you want to delete?')) return;
+    if (!confirm(lang === 'KOR' ? '정말 삭제하시겠습니까?' : lang === 'ENG' ? 'Are you sure you want to delete?' : '您确定要删除吗？')) return;
     
     try {
       const { error } = await supabase
@@ -221,7 +229,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         selectedProducts.includes(p.id) ? { ...p, ...updateData } : p
       ));
       setSelectedProducts([]);
-      toast.success(lang === 'KOR' ? '일괄 처리가 완료되었습니다.' : 'Bulk action completed.');
+      toast.success(lang === 'KOR' ? '일괄 처리가 완료되었습니다.' : lang === 'ENG' ? 'Bulk action completed.' : '批量操作已完成。');
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -237,11 +245,11 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
     for (const file of files) {
       if (!allowedTypes.includes(file.type)) {
-        toast.error(`${file.name}: ${lang === 'KOR' ? '허용되지 않는 파일 형식입니다. (JPG, PNG, WEBP, GIF만 가능)' : 'Unsupported file format.'}`);
+        toast.error(`${file.name}: ${lang === 'KOR' ? '허용되지 않는 파일 형식입니다. (JPG, PNG, WEBP, GIF만 가능)' : lang === 'ENG' ? 'Unsupported file format.' : '不支持的文件格式。'}`);
         return;
       }
       if (file.size > maxSizeMB * 1024 * 1024) {
-        toast.error(`${file.name}: ${lang === 'KOR' ? '파일 크기가 5MB를 초과합니다.' : 'File size exceeds 5MB.'}`);
+        toast.error(`${file.name}: ${lang === 'KOR' ? '파일 크기가 5MB를 초과합니다.' : lang === 'ENG' ? 'File size exceeds 5MB.' : '文件大小超过 5MB。'}`);
         return;
       }
     }
@@ -293,7 +301,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         if (uploadError) {
           console.error('Storage 업로드 에러:', uploadError.message);
           if (uploadError.message.toLowerCase().includes('bucket not found')) {
-            throw new Error(lang === 'KOR' ? 'Supabase Storage에 "product-images" 버킷이 없습니다. 버킷을 먼저 생성해주세요.' : 'Storage bucket "product-images" not found. Please create it in Supabase.');
+            throw new Error(lang === 'KOR' ? 'Supabase Storage에 "product-images" 버킷이 없습니다. 버킷을 먼저 생성해주세요.' : lang === 'ENG' ? 'Storage bucket "product-images" not found. Please create it in Supabase.' : '未找到存储桶 "product-images"。请先在 Supabase 中创建。');
           }
           throw uploadError;
         }
@@ -357,7 +365,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
           .eq('id', editingProduct.id);
         if (error) {
           if (error.code === '42501') {
-            toast.error(lang === 'KOR' ? '권한이 부족하여 상품을 수정할 수 없습니다. (RLS 정책 확인 필요)' : 'Insufficient permissions to update product. (Check RLS policies)');
+            toast.error(lang === 'KOR' ? '권한이 부족하여 상품을 수정할 수 없습니다. (RLS 정책 확인 필요)' : lang === 'ENG' ? 'Insufficient permissions to update product. (Check RLS policies)' : '权限不足，无法更新产品。（请检查 RLS 策略）');
           }
           console.error('Error updating product:', error);
           throw error;
@@ -370,7 +378,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
           .single();
         if (error) {
           if (error.code === '42501') {
-            toast.error(lang === 'KOR' ? '권한이 부족하여 상품을 등록할 수 없습니다. (RLS 정책 확인 필요)' : 'Insufficient permissions to add product. (Check RLS policies)');
+            toast.error(lang === 'KOR' ? '권한이 부족하여 상품을 등록할 수 없습니다. (RLS 정책 확인 필요)' : lang === 'ENG' ? 'Insufficient permissions to add product. (Check RLS policies)' : '权限不足，无法添加产品。（请检查 RLS 策略）');
           }
           console.error('Error inserting product:', error);
           throw error;
@@ -401,7 +409,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         }
       }
 
-      toast.success(lang === 'KOR' ? '저장되었습니다.' : 'Saved successfully.');
+      toast.success(lang === 'KOR' ? '저장되었습니다.' : lang === 'ENG' ? 'Saved successfully.' : '保存成功。');
       setIsModalOpen(false);
       fetchData();
       resetForm();
@@ -413,7 +421,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!window.confirm(lang === 'KOR' ? '정말 삭제하시겠습니까?' : 'Are you sure you want to delete this product?')) return;
+    if (!window.confirm(lang === 'KOR' ? '정말 삭제하시겠습니까?' : lang === 'ENG' ? 'Are you sure you want to delete this product?' : '您确定要删除此产品吗？')) return;
 
     try {
       const { error } = await supabase
@@ -442,6 +450,9 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
       brand: 'DOKB',
       stock_quantity: 0,
       is_active: true,
+      original_price: 0,
+      discount_rate: 0,
+      shipping_fee: 0,
       images: [],
       thumbnail: '',
       tags: []
@@ -496,10 +507,10 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
             <h1 className="text-4xl font-serif font-bold text-primary mb-2">
-              {lang === 'KOR' ? '상품 관리' : 'Product Management'}
+              {lang === 'KOR' ? '상품 관리' : lang === 'ENG' ? 'Product Management' : '产品管理'}
             </h1>
             <p className="text-gray-500">
-              {lang === 'KOR' ? '도깨비몰의 상품 카탈로그를 관리하세요' : 'Manage your DOKB Mall product catalog'}
+              {lang === 'KOR' ? '도깨비몰의 상품 카탈로그를 관리하세요' : lang === 'ENG' ? 'Manage your DOKB Mall product catalog' : '管理您的 DOKB Mall 产品目录'}
             </p>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -508,14 +519,14 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               className="flex items-center gap-2 bg-white text-primary border border-gray-100 px-6 py-4 rounded-2xl font-bold hover:bg-gray-50 transition-all shadow-sm"
             >
               <Users className="w-5 h-5 text-accent-teal" />
-              {lang === 'KOR' ? '회원 관리' : 'User Management'}
+              {lang === 'KOR' ? '회원 관리' : lang === 'ENG' ? 'User Management' : '用户管理'}
             </button>
             <button 
               onClick={() => { resetForm(); setIsModalOpen(true); }}
               className="flex items-center gap-2 bg-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
             >
               <Plus className="w-5 h-5" />
-              {lang === 'KOR' ? '새 상품 등록' : 'Add New Product'}
+              {lang === 'KOR' ? '새 상품 등록' : lang === 'ENG' ? 'Add New Product' : '添加新产品'}
             </button>
           </div>
         </div>
@@ -527,7 +538,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               <Package className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{lang === 'KOR' ? '전체 상품' : 'Total Products'}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{lang === 'KOR' ? '전체 상품' : lang === 'ENG' ? 'Total Products' : '总产品数'}</p>
               <p className="text-3xl font-serif font-bold text-primary">{stats.total}</p>
             </div>
           </div>
@@ -536,7 +547,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               <AlertTriangle className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{lang === 'KOR' ? '재고 부족' : 'Low Stock'}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{lang === 'KOR' ? '재고 부족' : lang === 'ENG' ? 'Low Stock' : '库存不足'}</p>
               <p className="text-3xl font-serif font-bold text-primary">{stats.lowStock}</p>
             </div>
           </div>
@@ -545,7 +556,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               <TrendingUp className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{lang === 'KOR' ? '오늘의 주문' : 'Today\'s Orders'}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{lang === 'KOR' ? '오늘의 주문' : lang === 'ENG' ? "Today's Orders" : '今日订单'}</p>
               <p className="text-3xl font-serif font-bold text-primary">{stats.todayOrders}</p>
             </div>
           </div>
@@ -559,7 +570,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input 
                   type="text" 
-                  placeholder={lang === 'KOR' ? '상품 검색...' : 'Search products...'}
+                  placeholder={lang === 'KOR' ? '상품 검색...' : lang === 'ENG' ? 'Search products...' : '搜索产品...'}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-3 outline-none focus:border-primary transition-all text-primary"
@@ -570,7 +581,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="bg-gray-50 border border-gray-100 rounded-xl px-6 py-3 outline-none focus:border-primary transition-all font-bold text-sm text-primary"
               >
-                <option value="all">{lang === 'KOR' ? '전체 카테고리' : 'All Categories'}</option>
+                <option value="all">{lang === 'KOR' ? '전체 카테고리' : lang === 'ENG' ? 'All Categories' : '所有类别'}</option>
                 <option value="beauty">Beauty</option>
                 <option value="food">Food</option>
                 <option value="lifestyle">Lifestyle</option>
@@ -580,7 +591,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
             {selectedProducts.length > 0 && (
               <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
-                <span className="text-sm font-bold text-primary">{selectedProducts.length} {lang === 'KOR' ? '개 선택됨' : 'selected'}</span>
+                <span className="text-sm font-bold text-primary">{selectedProducts.length} {lang === 'KOR' ? '개 선택됨' : lang === 'ENG' ? 'selected' : '已选择'}</span>
                 <div className="flex gap-2">
                   <button onClick={() => handleBulkAction('activate')} className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"><CheckCircle2 className="w-5 h-5" /></button>
                   <button onClick={() => handleBulkAction('deactivate')} className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors"><XCircle className="w-5 h-5" /></button>
@@ -602,12 +613,12 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                       className="rounded border-gray-300 text-primary focus:ring-primary"
                     />
                   </th>
-                  <th className="px-6 py-6">{lang === 'KOR' ? '상품 정보' : 'Product Info'}</th>
-                  <th className="px-6 py-6">{lang === 'KOR' ? '카테고리' : 'Category'}</th>
-                  <th className="px-6 py-6">{lang === 'KOR' ? '가격' : 'Price'}</th>
-                  <th className="px-6 py-6">{lang === 'KOR' ? '재고' : 'Stock'}</th>
-                  <th className="px-6 py-6">{lang === 'KOR' ? '상태' : 'Status'}</th>
-                  <th className="px-8 py-6 text-right">{lang === 'KOR' ? '관리' : 'Actions'}</th>
+                  <th className="px-6 py-6">{lang === 'KOR' ? '상품 정보' : lang === 'ENG' ? 'Product Info' : '产品信息'}</th>
+                  <th className="px-6 py-6">{lang === 'KOR' ? '카테고리' : lang === 'ENG' ? 'Category' : '类别'}</th>
+                  <th className="px-6 py-6">{lang === 'KOR' ? '가격' : lang === 'ENG' ? 'Price' : '价格'}</th>
+                  <th className="px-6 py-6">{lang === 'KOR' ? '재고' : lang === 'ENG' ? 'Stock' : '库存'}</th>
+                  <th className="px-6 py-6">{lang === 'KOR' ? '상태' : lang === 'ENG' ? 'Status' : '状态'}</th>
+                  <th className="px-8 py-6 text-right">{lang === 'KOR' ? '관리' : lang === 'ENG' ? 'Actions' : '操作'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -706,7 +717,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               >
                 <div className="p-8 lg:p-10 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="text-3xl font-serif font-bold text-primary">
-                    {editingProduct ? (lang === 'KOR' ? '상품 수정' : 'Edit Product') : (lang === 'KOR' ? '새 상품 등록' : 'Add New Product')}
+                    {editingProduct ? (lang === 'KOR' ? '상품 수정' : lang === 'ENG' ? 'Edit Product' : '编辑产品') : (lang === 'KOR' ? '새 상품 등록' : lang === 'ENG' ? 'Add New Product' : '添加新产品')}
                   </h2>
                   <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-primary transition-colors">
                     <X className="w-6 h-6" />
@@ -719,11 +730,11 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                     <section className="space-y-6">
                       <h3 className="text-lg font-bold text-primary flex items-center gap-2">
                         <Info className="w-5 h-5 text-accent-teal" />
-                        {lang === 'KOR' ? '기본 정보' : 'Basic Information'}
+                        {lang === 'KOR' ? '기본 정보' : lang === 'ENG' ? 'Basic Information' : '基本信息'}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '상품명 (국문)' : 'Product Name (KR)'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '상품명 (국문)' : lang === 'ENG' ? 'Product Name (KR)' : '产品名称 (韩文)'}</label>
                           <input 
                             required
                             type="text" 
@@ -733,7 +744,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '상품명 (영문)' : 'Product Name (EN)'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '상품명 (영문)' : lang === 'ENG' ? 'Product Name (EN)' : '产品名称 (英文)'}</label>
                           <input 
                             required
                             type="text" 
@@ -745,20 +756,20 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '카테고리' : 'Category'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '카테고리' : lang === 'ENG' ? 'Category' : '类别'}</label>
                           <select 
                             value={formData.category}
                             onChange={e => setFormData({...formData, category: e.target.value})}
                             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold text-primary"
                           >
-                            <option value="beauty">Beauty</option>
-                            <option value="food">Food</option>
-                            <option value="lifestyle">Lifestyle</option>
-                            <option value="dokb_brand">DOKB Brand</option>
+                            <option value="beauty">{lang === 'KOR' ? '뷰티' : lang === 'ENG' ? 'Beauty' : '美容'}</option>
+                            <option value="food">{lang === 'KOR' ? '푸드' : lang === 'ENG' ? 'Food' : '食品'}</option>
+                            <option value="lifestyle">{lang === 'KOR' ? '라이프스타일' : lang === 'ENG' ? 'Lifestyle' : '生活方式'}</option>
+                            <option value="dokb_brand">{lang === 'KOR' ? '도깨비 브랜드' : lang === 'ENG' ? 'DOKB Brand' : 'DOKB 品牌'}</option>
                           </select>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '브랜드' : 'Brand'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '브랜드' : lang === 'ENG' ? 'Brand' : '品牌'}</label>
                           <input 
                             type="text" 
                             value={formData.brand}
@@ -773,11 +784,47 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                     <section className="space-y-6">
                       <h3 className="text-lg font-bold text-primary flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-accent-teal" />
-                        {lang === 'KOR' ? '가격 및 재고' : 'Pricing & Stock'}
+                        {lang === 'KOR' ? '가격 및 재고' : lang === 'ENG' ? 'Pricing & Stock' : '价格与库存'}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '가격 (KRW)' : 'Price (KRW)'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '소비자 가격 (KRW)' : lang === 'ENG' ? 'Consumer Price (KRW)' : '零售价 (KRW)'}</label>
+                          <input 
+                            type="number" 
+                            value={formData.original_price || ''}
+                            onChange={e => {
+                              const original = Number(e.target.value);
+                              const discount = formData.discount_rate || 0;
+                              const price = original * (1 - discount / 100);
+                              setFormData({
+                                ...formData, 
+                                original_price: original,
+                                price: Math.round(price)
+                              });
+                            }}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '할인율 (%)' : lang === 'ENG' ? 'Discount Rate (%)' : '折扣率 (%)'}</label>
+                          <input 
+                            type="number" 
+                            value={formData.discount_rate || ''}
+                            onChange={e => {
+                              const discount = Number(e.target.value);
+                              const original = formData.original_price || 0;
+                              const price = original * (1 - discount / 100);
+                              setFormData({
+                                ...formData, 
+                                discount_rate: discount,
+                                price: Math.round(price)
+                              });
+                            }}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '판매 가격 (KRW)' : lang === 'ENG' ? 'Sale Price (KRW)' : '销售价 (KRW)'}</label>
                           <input 
                             required
                             type="number" 
@@ -787,7 +834,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '가격 (USD)' : 'Price (USD)'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '가격 (USD)' : lang === 'ENG' ? 'Price (USD)' : '价格 (USD)'}</label>
                           <input 
                             required
                             type="number" 
@@ -798,7 +845,16 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '재고 수량' : 'Stock Quantity'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '배송비 (KRW)' : lang === 'ENG' ? 'Shipping Fee (KRW)' : '运费 (KRW)'}</label>
+                          <input 
+                            type="number" 
+                            value={formData.shipping_fee || ''}
+                            onChange={e => setFormData({...formData, shipping_fee: Number(e.target.value)})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 outline-none focus:border-primary transition-all font-bold text-primary" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '재고 수량' : lang === 'ENG' ? 'Stock Quantity' : '库存数量'}</label>
                           <input 
                             required
                             type="number" 
@@ -814,7 +870,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                     <section className="space-y-6">
                       <h3 className="text-lg font-bold text-primary flex items-center gap-2">
                         <Upload className="w-5 h-5 text-accent-teal" />
-                        {lang === 'KOR' ? '이미지 등록' : 'Image Upload'}
+                        {lang === 'KOR' ? '이미지 등록' : lang === 'ENG' ? 'Image Upload' : '上传图片'}
                       </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
                         {/* Existing Images */}
@@ -853,7 +909,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-primary hover:text-primary transition-all"
                         >
                           <Plus className="w-6 h-6" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest">{lang === 'KOR' ? '이미지 추가' : 'Add Image'}</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest">{lang === 'KOR' ? '이미지 추가' : lang === 'ENG' ? 'Add Image' : '添加图片'}</span>
                         </button>
                         <input 
                           type="file" 
@@ -871,7 +927,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-bold text-primary flex items-center gap-2">
                           <ShoppingBag className="w-5 h-5 text-accent-teal" />
-                          {lang === 'KOR' ? '옵션 설정' : 'Option Management'}
+                          {lang === 'KOR' ? '옵션 설정' : lang === 'ENG' ? 'Option Management' : '选项管理'}
                         </h3>
                         <button 
                           type="button"
@@ -879,7 +935,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           className="text-xs font-bold text-accent-teal hover:underline flex items-center gap-1"
                         >
                           <Plus className="w-4 h-4" />
-                          {lang === 'KOR' ? '옵션 추가' : 'Add Option'}
+                          {lang === 'KOR' ? '옵션 추가' : lang === 'ENG' ? 'Add Option' : '添加选项'}
                         </button>
                       </div>
                       
@@ -895,7 +951,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                             </button>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{lang === 'KOR' ? '옵션명 (국문)' : 'Option Name (KR)'}</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{lang === 'KOR' ? '옵션명 (국문)' : lang === 'ENG' ? 'Option Name (KR)' : '选项名称 (韩文)'}</label>
                                 <input 
                                   type="text" 
                                   placeholder="e.g. 색상"
@@ -909,7 +965,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                                 />
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{lang === 'KOR' ? '옵션값 (국문)' : 'Option Value (KR)'}</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{lang === 'KOR' ? '옵션값 (국문)' : lang === 'ENG' ? 'Option Value (KR)' : '选项值 (韩文)'}</label>
                                 <input 
                                   type="text" 
                                   placeholder="e.g. 블랙"
@@ -923,7 +979,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                                 />
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{lang === 'KOR' ? '추가 금액' : 'Add. Price'}</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{lang === 'KOR' ? '추가 금액' : lang === 'ENG' ? 'Add. Price' : '额外价格'}</label>
                                 <input 
                                   type="number" 
                                   value={opt.additional_price}
@@ -936,7 +992,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                                 />
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{lang === 'KOR' ? '옵션 재고' : 'Opt. Stock'}</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{lang === 'KOR' ? '옵션 재고' : lang === 'ENG' ? 'Opt. Stock' : '选项库存'}</label>
                                 <input 
                                   type="number" 
                                   value={opt.stock_quantity}
@@ -958,11 +1014,11 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                     <section className="space-y-6">
                       <h3 className="text-lg font-bold text-primary flex items-center gap-2">
                         <Edit className="w-5 h-5 text-accent-teal" />
-                        {lang === 'KOR' ? '상세 설명' : 'Description'}
+                        {lang === 'KOR' ? '상세 설명' : lang === 'ENG' ? 'Description' : '详细说明'}
                       </h3>
                       <div className="space-y-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '설명 (국문)' : 'Description (KR)'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '설명 (국문)' : lang === 'ENG' ? 'Description (KR)' : '说明 (韩文)'}</label>
                           <textarea 
                             rows={4}
                             value={formData.description_ko}
@@ -971,7 +1027,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '설명 (영문)' : 'Description (EN)'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">{lang === 'KOR' ? '설명 (영문)' : lang === 'ENG' ? 'Description (EN)' : '说明 (英文)'}</label>
                           <textarea 
                             rows={4}
                             value={formData.description_en}
@@ -988,7 +1044,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                         onClick={() => setIsModalOpen(false)}
                         className="px-8 py-4 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all"
                       >
-                        {lang === 'KOR' ? '취소' : 'Cancel'}
+                        {lang === 'KOR' ? '취소' : lang === 'ENG' ? 'Cancel' : '取消'}
                       </button>
                       <button 
                         type="submit"
@@ -1000,7 +1056,7 @@ export const AdminProducts: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                         ) : (
                           <Save className="w-5 h-5" />
                         )}
-                        {lang === 'KOR' ? '상품 저장하기' : 'Save Product'}
+                        {lang === 'KOR' ? '상품 저장하기' : lang === 'ENG' ? 'Save Product' : '保存产品'}
                       </button>
                     </div>
                   </form>

@@ -23,7 +23,7 @@ const DokkaebiClubIcon = ({ className }: { className?: string }) => (
 );
 
 interface HomeProps {
-  lang: 'KOR' | 'ENG';
+  lang: 'KOR' | 'ENG' | 'CHI';
   user: any;
   userInquiries: any[];
   formStatus: string;
@@ -35,55 +35,55 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
   const navigate = useNavigate();
   const t = {
     hero: {
-      title: lang === 'KOR' ? '뚝딱! 최고의 K-상품을 찾아드립니다' : 'Korean Quality, Magic Delivered',
-      subtitle: lang === 'KOR' ? '도깨비몰이 엄선한 프리미엄 K-상품을 국내외 시장에 공급합니다' : 'DOKB Mall supplies premium K-products curated for domestic and global markets.',
-      ctaPrimary: lang === 'KOR' ? '상품 둘러보기' : 'Shop Now',
-      ctaSecondary: lang === 'KOR' ? 'B2B 바이어 문의' : 'B2B Inquiry'
+      title: lang === 'KOR' ? '뚝딱! 최고의 K-상품을 찾아드립니다' : lang === 'ENG' ? 'Korean Quality, Magic Delivered' : '韩流品质，魔力送达',
+      subtitle: lang === 'KOR' ? '도깨비몰이 엄선한 프리미엄 K-상품을 국내외 시장에 공급합니다' : lang === 'ENG' ? 'DOKB Mall supplies premium K-products curated for domestic and global markets.' : 'DOKB Mall 为国内外市场提供精选的优质韩国产品。',
+      ctaPrimary: lang === 'KOR' ? '상품 둘러보기' : lang === 'ENG' ? 'Shop Now' : '立即购物',
+      ctaSecondary: lang === 'KOR' ? 'B2B 바이어 문의' : lang === 'ENG' ? 'B2B Inquiry' : 'B2B 咨询'
     },
     story: {
-      title: lang === 'KOR' ? '도깨비몰 이야기' : 'Our Story',
+      title: lang === 'KOR' ? '도깨비몰 이야기' : lang === 'ENG' ? 'Our Story' : '我们的故事',
       content: lang === 'KOR' 
         ? '도깨비는 방망이 하나로 무엇이든 만들어냅니다. 도깨비몰은 한국 최고의 품질을 가진 상품을 발굴하여, 국내외 바이어와 소비자에게 마법처럼 전달합니다.'
-        : 'DOKB Mall discovers Korea\'s finest quality products and delivers them magically to buyers and consumers worldwide.',
-      card1: lang === 'KOR' ? '엄선된 상품' : 'Curated Products',
-      card2: lang === 'KOR' ? '글로벌 공급' : 'Global Supply',
-      card3: lang === 'KOR' ? '자체 브랜드' : 'Own Brand DOKB'
+        : lang === 'ENG' ? 'DOKB Mall discovers Korea\'s finest quality products and delivers them magically to buyers and consumers worldwide.' : 'DOKB Mall 发现韩国最优质的产品，并神奇地将其交付给全球的买家和消费者。',
+      card1: lang === 'KOR' ? '엄선된 상품' : lang === 'ENG' ? 'Curated Products' : '精选产品',
+      card2: lang === 'KOR' ? '글로벌 공급' : lang === 'ENG' ? 'Global Supply' : '全球供应',
+      card3: lang === 'KOR' ? '자체 브랜드' : lang === 'ENG' ? 'Own Brand DOKB' : '自有品牌 DOKB'
     },
     categories: {
-      title: lang === 'KOR' ? '도깨비몰 상품관' : 'Product Collections',
-      beauty: { title: lang === 'KOR' ? 'K-뷰티' : 'K-Beauty', desc: lang === 'KOR' ? '프리미엄 스킨케어 & 메이크업' : 'Premium Skincare & Makeup' },
-      food: { title: lang === 'KOR' ? 'K-푸드' : 'K-Food', desc: lang === 'KOR' ? '전통의 맛과 현대적 감각' : 'Traditional Taste, Modern Style' },
-      lifestyle: { title: lang === 'KOR' ? '생활용품' : 'Lifestyle', desc: lang === 'KOR' ? '삶의 질을 높이는 혁신 아이템' : 'Innovative Items for Life' },
-      brand: { title: lang === 'KOR' ? 'DOKB 자체브랜드' : 'DOKB Brand', desc: lang === 'KOR' ? '도깨비몰만의 특별한 셀렉션' : 'Exclusive DOKB Selections' },
-      explore: lang === 'KOR' ? '보러가기' : 'Explore'
+      title: lang === 'KOR' ? '도깨비몰 상품관' : lang === 'ENG' ? 'Product Collections' : '产品系列',
+      beauty: { title: lang === 'KOR' ? 'K-뷰티' : lang === 'ENG' ? 'K-Beauty' : '韩国美容', desc: lang === 'KOR' ? '프리미엄 스킨케어 & 메이크업' : lang === 'ENG' ? 'Premium Skincare & Makeup' : '优质护肤和化妆品' },
+      food: { title: lang === 'KOR' ? 'K-푸드' : lang === 'ENG' ? 'K-Food' : '韩国食品', desc: lang === 'KOR' ? '전통의 맛과 현대적 감각' : lang === 'ENG' ? 'Traditional Taste, Modern Style' : '传统口味，现代风格' },
+      lifestyle: { title: lang === 'KOR' ? '생활용품' : lang === 'ENG' ? 'Lifestyle' : '生活方式', desc: lang === 'KOR' ? '삶의 질을 높이는 혁신 아이템' : lang === 'ENG' ? 'Innovative Items for Life' : '提升生活品质的创新产品' },
+      brand: { title: lang === 'KOR' ? 'DOKB 자체브랜드' : lang === 'ENG' ? 'DOKB Brand' : 'DOKB 品牌', desc: lang === 'KOR' ? '도깨비몰만의 특별한 셀렉션' : lang === 'ENG' ? 'Exclusive DOKB Selections' : '独家 DOKB 精选' },
+      explore: lang === 'KOR' ? '보러가기' : lang === 'ENG' ? 'Explore' : '探索'
     },
     mypage: {
-      title: lang === 'KOR' ? '나의 문의 내역' : 'My Inquiries',
-      empty: lang === 'KOR' ? '문의 내역이 없습니다.' : 'No inquiries found.',
-      type: lang === 'KOR' ? '유형' : 'Type',
-      date: lang === 'KOR' ? '날짜' : 'Date',
-      status: lang === 'KOR' ? '상태' : 'Status',
-      pending: lang === 'KOR' ? '검토 중' : 'Pending'
+      title: lang === 'KOR' ? '나의 문의 내역' : lang === 'ENG' ? 'My Inquiries' : '我的咨询',
+      empty: lang === 'KOR' ? '문의 내역이 없습니다.' : lang === 'ENG' ? 'No inquiries found.' : '未找到咨询。',
+      type: lang === 'KOR' ? '유형' : lang === 'ENG' ? 'Type' : '类型',
+      date: lang === 'KOR' ? '날짜' : lang === 'ENG' ? 'Date' : '日期',
+      status: lang === 'KOR' ? '상태' : lang === 'ENG' ? 'Status' : '状态',
+      pending: lang === 'KOR' ? '검토 중' : lang === 'ENG' ? 'Pending' : '待处理'
     },
     b2b: {
-      title: lang === 'KOR' ? '글로벌 바이어를 위한 특별관' : 'For Global B2B Buyers',
-      content: lang === 'KOR' ? '도매 구매, 샘플 요청, OEM 상담까지 — 도깨비몰이 함께합니다' : 'From bulk orders to sample requests and OEM consulting — DOKB Mall is with you.',
-      feature1: lang === 'KOR' ? '벌크 도매 주문' : 'Bulk Orders',
-      feature2: lang === 'KOR' ? '샘플 신청' : 'Sample Request',
-      feature3: lang === 'KOR' ? 'OEM 협력' : 'OEM Partnership',
-      cta: lang === 'KOR' ? '바이어 문의하기' : 'Contact as a Buyer'
+      title: lang === 'KOR' ? '글로벌 바이어를 위한 특별관' : lang === 'ENG' ? 'For Global B2B Buyers' : '面向全球 B2B 买家',
+      content: lang === 'KOR' ? '도매 구매, 샘플 요청, OEM 상담까지 — 도깨비몰이 함께합니다' : lang === 'ENG' ? 'From bulk orders to sample requests and OEM consulting — DOKB Mall is with you.' : '从批量订单到样品请求和 OEM 咨询 — DOKB Mall 与您同在。',
+      feature1: lang === 'KOR' ? '벌크 도매 주문' : lang === 'ENG' ? 'Bulk Orders' : '批量订单',
+      feature2: lang === 'KOR' ? '샘플 신청' : lang === 'ENG' ? 'Sample Request' : '样品请求',
+      feature3: lang === 'KOR' ? 'OEM 협력' : lang === 'ENG' ? 'OEM Partnership' : 'OEM 合作伙伴',
+      cta: lang === 'KOR' ? '바이어 문의하기' : lang === 'ENG' ? 'Contact as a Buyer' : '作为买家联系'
     },
     trust: {
-      title: lang === 'KOR' ? '왜 도깨비몰인가요?' : 'Why DOKB Mall?',
-      stat1: lang === 'KOR' ? '50+ 입점 브랜드' : '50+ Partner Brands',
-      stat2: lang === 'KOR' ? '100+ 엄선 상품' : '100+ Curated SKUs',
-      stat3: lang === 'KOR' ? '30+ 국가 공급' : '30+ Countries Served',
-      stat4: lang === 'KOR' ? 'KOTRA 협력' : 'KOTRA Partner'
+      title: lang === 'KOR' ? '왜 도깨비몰인가요?' : lang === 'ENG' ? 'Why DOKB Mall?' : '为什么选择 DOKB Mall？',
+      stat1: lang === 'KOR' ? '50+ 입점 브랜드' : lang === 'ENG' ? '50+ Partner Brands' : '50+ 合作伙伴品牌',
+      stat2: lang === 'KOR' ? '100+ 엄선 상품' : lang === 'ENG' ? '100+ Curated SKUs' : '100+ 精选 SKU',
+      stat3: lang === 'KOR' ? '30+ 국가 공급' : lang === 'ENG' ? '30+ Countries Served' : '服务 30+ 国家',
+      stat4: lang === 'KOR' ? 'KOTRA 협력' : lang === 'ENG' ? 'KOTRA Partner' : 'KOTRA 合作伙伴'
     },
     newsletter: {
-      title: lang === 'KOR' ? '도깨비몰 소식을 받아보세요' : 'Stay in the Loop',
-      subtext: lang === 'KOR' ? '신상품 및 바이어 특가 정보를 가장 먼저 받아보세요' : 'Be the first to receive new product updates and exclusive buyer deals.',
-      subscribe: lang === 'KOR' ? '구독하기' : 'Subscribe'
+      title: lang === 'KOR' ? '도깨비몰 소식을 받아보세요' : lang === 'ENG' ? 'Stay in the Loop' : '保持联系',
+      subtext: lang === 'KOR' ? '신상품 및 바이어 특가 정보를 가장 먼저 받아보세요' : lang === 'ENG' ? 'Be the first to receive new product updates and exclusive buyer deals.' : '率先接收新产品更新和独家买家优惠。',
+      subscribe: lang === 'KOR' ? '구독하기' : lang === 'ENG' ? 'Subscribe' : '订阅'
     }
   };
 

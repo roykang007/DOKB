@@ -5,7 +5,7 @@ import { Trash2, ShoppingBag, ArrowRight, ChevronLeft, Info } from 'lucide-react
 import { useCart } from '../contexts/CartContext';
 import { formatPrice, cn } from '../lib/utils';
 
-export const Cart: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
+export const Cart: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) => {
   const { cartItems, updateQuantity, removeFromCart, totalAmount, totalAmountUsd, loading } = useCart();
   const navigate = useNavigate();
 
@@ -50,7 +50,7 @@ export const Cart: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             <ChevronLeft className="w-6 h-6" />
           </Link>
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-white">
-            {lang === 'KOR' ? '장바구니' : 'Shopping Cart'}
+            {lang === 'KOR' ? '장바구니' : lang === 'ENG' ? 'Shopping Cart' : '购物车'}
             <span className="ml-4 text-lg font-sans font-normal text-gray-500">({cartItems.length})</span>
           </h1>
         </div>
@@ -129,20 +129,20 @@ export const Cart: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
           <div className="lg:col-span-1">
             <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 sticky top-32">
               <h2 className="text-2xl font-serif font-bold text-white mb-8">
-                {lang === 'KOR' ? '주문 요약' : 'Order Summary'}
+                {lang === 'KOR' ? '주문 요약' : lang === 'ENG' ? 'Order Summary' : '订单摘要'}
               </h2>
               
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between text-gray-400">
-                  <span>{lang === 'KOR' ? '상품 금액' : 'Subtotal'}</span>
+                  <span>{lang === 'KOR' ? '상품 금액' : lang === 'ENG' ? 'Subtotal' : '小计'}</span>
                   <span>{lang === 'KOR' ? formatPrice(totalAmount, 'KRW') : formatPrice(totalAmountUsd, 'USD')}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
-                  <span>{lang === 'KOR' ? '배송비' : 'Shipping'}</span>
-                  <span className="text-accent-teal font-bold">{lang === 'KOR' ? '무료' : 'FREE'}</span>
+                  <span>{lang === 'KOR' ? '배송비' : lang === 'ENG' ? 'Shipping' : '运费'}</span>
+                  <span className="text-accent-teal font-bold">{lang === 'KOR' ? '무료' : lang === 'ENG' ? 'FREE' : '免费'}</span>
                 </div>
                 <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                  <span className="text-lg font-bold text-white">{lang === 'KOR' ? '총 결제 금액' : 'Total'}</span>
+                  <span className="text-lg font-bold text-white">{lang === 'KOR' ? '총 결제 금액' : lang === 'ENG' ? 'Total' : '总计'}</span>
                   <span className="text-3xl font-serif font-bold text-accent-gold">
                     {lang === 'KOR' ? formatPrice(totalAmount, 'KRW') : formatPrice(totalAmountUsd, 'USD')}
                   </span>
@@ -154,7 +154,7 @@ export const Cart: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 <p className="text-xs text-accent-teal leading-relaxed">
                   {lang === 'KOR' 
                     ? '관세 및 부가세는 배송 국가의 규정에 따라 별도로 발생할 수 있습니다.' 
-                    : 'Customs duties and taxes may be charged separately depending on the shipping country.'}
+                    : lang === 'ENG' ? 'Customs duties and taxes may be charged separately depending on the shipping country.' : '根据收货国家的规定，可能会另外产生关税和增值税。'}
                 </p>
               </div>
 
@@ -162,7 +162,7 @@ export const Cart: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 onClick={() => navigate('/checkout')}
                 className="w-full bg-accent-gold text-primary py-5 rounded-2xl font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-accent-gold/20"
               >
-                {lang === 'KOR' ? '결제하기' : 'Checkout'}
+                {lang === 'KOR' ? '결제하기' : lang === 'ENG' ? 'Checkout' : '结账'}
                 <ArrowRight className="w-5 h-5" />
               </button>
               

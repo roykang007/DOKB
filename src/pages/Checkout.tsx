@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ArrowRight, Truck, CreditCard, ShieldCheck, CheckCircle2, Info, MapPin, User, Mail, Phone, Globe } from 'lucide-react';
+import { ChevronLeft, ArrowRight, Truck, CreditCard, ShieldCheck, CheckCircle2, Info, MapPin, User, Mail, Phone, Globe, Eye, ShoppingBag } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { supabase } from '../lib/supabase';
 import { formatPrice, cn } from '../lib/utils';
@@ -49,14 +49,17 @@ import { toast } from 'sonner';
  * $$ LANGUAGE plpgsql;
  */
 
-type CheckoutStep = 'shipping' | 'payment' | 'confirmation';
+type CheckoutStep = 'shipping' | 'review' | 'payment' | 'confirmation';
 
-export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
+export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) => {
   const { cartItems, totalAmount, totalAmountUsd, clearCart, loading: cartLoading } = useCart();
   const navigate = useNavigate();
   const [step, setStep] = useState<CheckoutStep>('shipping');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+
+  const totalShippingFee = cartItems.reduce((acc, item) => acc + (item.product?.shipping_fee || 0), 0);
+  const totalShippingFeeUsd = totalShippingFee / 1300;
   
   const [shippingData, setShippingData] = useState({
     name: '',
@@ -64,7 +67,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
     phone: '',
     address: '',
     city: '',
-    country: lang === 'KOR' ? 'South Korea' : '',
+    country: lang === 'KOR' ? 'South Korea' : lang === 'ENG' ? 'USA' : 'China',
     postalCode: '',
     notes: ''
   });
@@ -75,12 +78,14 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
         setUser(user);
         setShippingData(prev => ({
           ...prev,
-          email: user.email || '',
-          name: user.user_metadata?.full_name || ''
+          email: prev.email || user.email || '',
+          name: prev.name || user.user_metadata?.full_name || ''
         }));
       }
     });
+  }, []);
 
+  useEffect(() => {
     if (!cartLoading && cartItems.length === 0 && step !== 'confirmation') {
       navigate('/cart');
     }
@@ -96,7 +101,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('payment');
+    setStep('review');
     window.scrollTo(0, 0);
   };
 
@@ -104,70 +109,85 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
     setLoading(true);
     
     try {
-      // 1. Create Order in Supabase
+      // 1. Create Order in Supabase (Directly as 'paid' for test version)
+      const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
+          order_number: orderNumber,
           user_id: user?.id || null,
-          total_amount: totalAmount,
-          total_amount_usd: totalAmountUsd,
-          status: 'pending',
-          shipping_address: `${shippingData.address}, ${shippingData.city}, ${shippingData.country} (${shippingData.postalCode})`,
+          guest_email: shippingData.email,
+          total_amount: totalAmount + totalShippingFee,
+          total_amount_usd: totalAmountUsd + totalShippingFeeUsd,
+          shipping_fee: totalShippingFee,
+          currency: lang === 'KOR' ? 'KRW' : lang === 'ENG' ? 'USD' : 'USD',
+          status: 'paid', // Test version: Directly set to paid
+          shipping_address: `${shippingData.address}${shippingData.city ? ', ' + shippingData.city : ''}`,
+          shipping_zipcode: shippingData.postalCode,
+          shipping_country: shippingData.country,
           shipping_name: shippingData.name,
-          shipping_email: shippingData.email,
           shipping_phone: shippingData.phone,
-          payment_method: lang === 'KOR' ? 'toss' : 'stripe'
+          payment_method: 'test_payment' // Test version: Use generic test method
         }])
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order Creation Error:', orderError);
+        throw orderError;
+      }
+      if (!order) throw new Error(lang === 'KOR' ? '주문 생성에 실패했습니다.' : lang === 'ENG' ? 'Failed to create order.' : '创建订单失败。');
 
       // 2. Create Order Items
       const orderItems = cartItems.map(item => ({
         order_id: order.id,
         product_id: item.product_id,
         option_id: item.option_id,
+        product_name_ko: item.product?.name_ko || '',
+        product_name_en: item.product?.name_en || '',
+        unit_price: lang === 'KOR' ? (item.product?.price || 0) : (item.product?.price_usd || 0),
         quantity: item.quantity,
-        price: item.product?.price || 0,
-        price_usd: item.product?.price_usd || 0
+        subtotal: (lang === 'KOR' ? (item.product?.price || 0) : (item.product?.price_usd || 0)) * item.quantity
       }));
 
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Order Items Error:', itemsError);
+        throw itemsError;
+      }
 
       // 3. Decrement Stock using RPC (Handles race conditions)
       for (const item of cartItems) {
-        const { error: stockError } = await supabase.rpc('decrement_stock', {
-          p_product_id: item.product_id,
-          p_quantity: item.quantity,
-          p_option_id: item.option_id
-        });
-        if (stockError) throw stockError;
+        try {
+          const { error: stockError } = await supabase.rpc('decrement_stock', {
+            p_product_id: item.product_id,
+            p_quantity: item.quantity,
+            p_option_id: item.option_id
+          });
+          if (stockError) {
+            console.warn('Stock decrement failed for item:', item.product_id, stockError);
+          }
+        } catch (e) {
+          console.warn('RPC call failed:', e);
+        }
       }
 
-      // 4. Simulate Payment (In real app, call Toss/Stripe SDK here)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 4. Simulate a very brief processing for UX
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // 5. Update Order Status
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ status: 'paid' })
-        .eq('id', order.id);
-
-      if (updateError) throw updateError;
-
-      // 6. Success
+      // 5. Success
       clearCart();
       setStep('confirmation');
-      toast.success(lang === 'KOR' ? '주문이 완료되었습니다!' : 'Order completed successfully!');
+      toast.success(lang === 'KOR' ? '주문이 완료되었습니다! (테스트 결제 완료)' : lang === 'ENG' ? 'Order completed successfully! (Test Payment Successful)' : '订单已完成！（测试支付成功）');
       window.scrollTo(0, 0);
 
     } catch (error: any) {
-      toast.error(error.message);
+      console.error('Checkout Error:', error);
+      toast.error(error.message || (lang === 'KOR' ? '주문 처리 중 오류가 발생했습니다.' : lang === 'ENG' ? 'An error occurred during checkout.' : '结账过程中发生错误。'));
     } finally {
       setLoading(false);
     }
@@ -185,7 +205,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             <CheckCircle2 className="w-12 h-12 text-accent-teal" />
           </div>
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-6">
-            {lang === 'KOR' ? '주문이 완료되었습니다!' : 'Thank You for Your Order!'}
+            {lang === 'KOR' ? '주문이 완료되었습니다!' : lang === 'ENG' ? 'Thank You for Your Order!' : '感谢您的订单！'}
           </h1>
           <p className="text-gray-400 text-lg mb-12 leading-relaxed">
             {lang === 'KOR' 
@@ -197,13 +217,13 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               to="/mypage/orders" 
               className="bg-white/10 text-white px-10 py-4 rounded-full font-bold hover:bg-white/20 transition-all"
             >
-              {lang === 'KOR' ? '주문 내역 보기' : 'View Order History'}
+              {lang === 'KOR' ? '주문 내역 보기' : lang === 'ENG' ? 'View Order History' : '查看订单历史'}
             </Link>
             <Link 
               to="/" 
               className="bg-accent-gold text-primary px-10 py-4 rounded-full font-bold hover:brightness-110 transition-all"
             >
-              {lang === 'KOR' ? '홈으로 돌아가기' : 'Back to Home'}
+              {lang === 'KOR' ? '홈으로 돌아가기' : lang === 'ENG' ? 'Back to Home' : '返回首页'}
             </Link>
           </div>
         </motion.div>
@@ -220,7 +240,11 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-white/10 -z-10" />
             <div 
               className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-accent-teal transition-all duration-500 -z-10" 
-              style={{ width: step === 'payment' ? '100%' : '50%' }}
+              style={{ 
+                width: step === 'confirmation' ? '100%' : 
+                       step === 'payment' ? '75%' : 
+                       step === 'review' ? '50%' : '25%' 
+              }}
             />
             
             <div className="flex flex-col items-center gap-2">
@@ -230,20 +254,35 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
               )}>
                 <Truck className="w-5 h-5" />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-accent-teal">{lang === 'KOR' ? '배송 정보' : 'Shipping'}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-accent-teal">{lang === 'KOR' ? '배송 정보' : lang === 'ENG' ? 'Shipping' : '配送'}</span>
             </div>
 
             <div className="flex flex-col items-center gap-2">
               <div className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all",
-                step === 'payment' ? "bg-accent-teal text-white scale-110" : "bg-white/10 text-gray-500"
+                step === 'review' ? "bg-accent-teal text-white scale-110" : 
+                (step === 'payment' || step === 'confirmation') ? "bg-accent-teal text-white" : "bg-white/10 text-gray-500"
+              )}>
+                <Eye className="w-5 h-5" />
+              </div>
+              <span className={cn(
+                "text-[10px] font-bold uppercase tracking-widest",
+                (step === 'review' || step === 'payment' || step === 'confirmation') ? "text-accent-teal" : "text-gray-500"
+              )}>{lang === 'KOR' ? '주문 확인' : lang === 'ENG' ? 'Review' : '预览'}</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-2">
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all",
+                step === 'payment' ? "bg-accent-teal text-white scale-110" : 
+                step === 'confirmation' ? "bg-accent-teal text-white" : "bg-white/10 text-gray-500"
               )}>
                 <CreditCard className="w-5 h-5" />
               </div>
               <span className={cn(
                 "text-[10px] font-bold uppercase tracking-widest",
-                step === 'payment' ? "text-accent-teal" : "text-gray-500"
-              )}>{lang === 'KOR' ? '결제' : 'Payment'}</span>
+                (step === 'payment' || step === 'confirmation') ? "text-accent-teal" : "text-gray-500"
+              )}>{lang === 'KOR' ? '결제' : lang === 'ENG' ? 'Payment' : '支付'}</span>
             </div>
           </div>
         </div>
@@ -263,13 +302,13 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                   <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 lg:p-10">
                     <h2 className="text-2xl font-serif font-bold text-white mb-8 flex items-center gap-3">
                       <MapPin className="w-6 h-6 text-accent-teal" />
-                      {lang === 'KOR' ? '배송지 정보' : 'Shipping Address'}
+                      {lang === 'KOR' ? '배송지 정보' : lang === 'ENG' ? 'Shipping Address' : '配送地址'}
                     </h2>
                     
                     <form id="shipping-form" onSubmit={handleShippingSubmit} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '이름' : 'Full Name'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '수령인 이름' : lang === 'ENG' ? 'Recipient Name' : '收件人姓名'}</label>
                           <div className="relative">
                             <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                             <input 
@@ -282,7 +321,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '이메일' : 'Email'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '이메일' : lang === 'ENG' ? 'Email' : '电子邮件'}</label>
                           <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                             <input 
@@ -298,7 +337,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '연락처' : 'Phone'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '연락처' : lang === 'ENG' ? 'Phone' : '电话'}</label>
                           <div className="relative">
                             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                             <input 
@@ -311,7 +350,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '국가' : 'Country'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '국가' : lang === 'ENG' ? 'Country' : '国家'}</label>
                           <div className="relative">
                             <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                             <input 
@@ -326,7 +365,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '주소' : 'Address'}</label>
+                        <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '주소' : lang === 'ENG' ? 'Address' : '地址'}</label>
                         <input 
                           required
                           type="text" 
@@ -338,7 +377,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '도시' : 'City'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '도시' : lang === 'ENG' ? 'City' : '城市'}</label>
                           <input 
                             required
                             type="text" 
@@ -348,7 +387,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '우편번호' : 'Postal Code'}</label>
+                          <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '우편번호' : lang === 'ENG' ? 'Postal Code' : '邮政编码'}</label>
                           <input 
                             required
                             type="text" 
@@ -360,7 +399,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '배송 메모 (선택)' : 'Shipping Notes (Optional)'}</label>
+                        <label className="text-xs font-bold uppercase tracking-widest text-gray-500">{lang === 'KOR' ? '배송 메모 (선택)' : lang === 'ENG' ? 'Shipping Notes (Optional)' : '配送备注（可选）'}</label>
                         <textarea 
                           rows={3}
                           value={shippingData.notes}
@@ -369,6 +408,87 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                         />
                       </div>
                     </form>
+                  </div>
+                </motion.div>
+              ) : step === 'review' ? (
+                <motion.div 
+                  key="review"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-8"
+                >
+                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 lg:p-10">
+                    <h2 className="text-2xl font-serif font-bold text-white mb-8 flex items-center gap-3">
+                      <Eye className="w-6 h-6 text-accent-teal" />
+                      {lang === 'KOR' ? '주문 내용 확인' : lang === 'ENG' ? 'Review Your Order' : '确认您的订单'}
+                    </h2>
+
+                    <div className="space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="bg-white/5 rounded-2xl p-6 space-y-4">
+                          <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                            <Truck className="w-4 h-4 text-accent-teal" />
+                            {lang === 'KOR' ? '배송지 정보' : lang === 'ENG' ? 'Shipping Info' : '配送信息'}
+                          </h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <p className="text-gray-500">{lang === 'KOR' ? '수령인' : lang === 'ENG' ? 'Recipient' : '收件人'}</p>
+                              <p className="text-white font-bold text-lg">{shippingData.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500">{lang === 'KOR' ? '연락처' : lang === 'ENG' ? 'Phone' : '电话'}</p>
+                              <p className="text-white font-medium">{shippingData.phone}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500">{lang === 'KOR' ? '주소' : lang === 'ENG' ? 'Address' : '地址'}</p>
+                              <p className="text-white font-medium">{shippingData.address}, {shippingData.city}, {shippingData.country} ({shippingData.postalCode})</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-white/5 rounded-2xl p-6 space-y-4">
+                          <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                            <ShoppingBag className="w-4 h-4 text-accent-teal" />
+                            {lang === 'KOR' ? '주문 요약' : lang === 'ENG' ? 'Order Summary' : '订单摘要'}
+                          </h3>
+                          <div className="space-y-3 text-sm">
+                            <div className="flex justify-between">
+                              <p className="text-gray-500">{lang === 'KOR' ? '총 상품 수' : lang === 'ENG' ? 'Total Items' : '商品总数'}</p>
+                              <p className="text-white font-medium">{cartItems.length}</p>
+                            </div>
+                            <div className="flex justify-between">
+                              <p className="text-gray-500">{lang === 'KOR' ? '총 결제 금액' : lang === 'ENG' ? 'Total Amount' : '总金额'}</p>
+                              <p className="text-accent-gold font-bold text-lg">
+                                {lang === 'KOR' ? formatPrice(totalAmount, 'KRW') : formatPrice(totalAmountUsd, 'USD')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white/5 rounded-2xl p-6">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">{lang === 'KOR' ? '주문 상품' : lang === 'ENG' ? 'Order Items' : '订单商品'}</h3>
+                        <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                          {cartItems.map((item) => (
+                            <div key={item.id} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5">
+                                  <img src={item.product?.thumbnail} alt="" className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                  <p className="text-white text-sm font-medium">{lang === 'KOR' ? item.product?.name_ko : item.product?.name_en}</p>
+                                  <p className="text-gray-500 text-xs">Qty: {item.quantity}</p>
+                                </div>
+                              </div>
+                              <p className="text-white text-sm">
+                                {lang === 'KOR' ? formatPrice((item.product?.price || 0) * item.quantity, 'KRW') : formatPrice((item.product?.price_usd || 0) * item.quantity, 'USD')}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               ) : (
@@ -382,51 +502,23 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                   <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 lg:p-10">
                     <h2 className="text-2xl font-serif font-bold text-white mb-8 flex items-center gap-3">
                       <CreditCard className="w-6 h-6 text-accent-teal" />
-                      {lang === 'KOR' ? '결제 수단' : 'Payment Method'}
+                      {lang === 'KOR' ? '결제 수단 (테스트 모드)' : lang === 'ENG' ? 'Payment Method (Test Mode)' : '支付方式（测试模式）'}
                     </h2>
 
                     <div className="space-y-6">
                       <div className="p-6 rounded-2xl bg-accent-teal/10 border border-accent-teal/30 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-2">
-                            {lang === 'KOR' ? (
-                              <img src="https://static.toss.im/assets/homepage/brand/logo-toss-blue.png" alt="Toss" className="w-full" />
-                            ) : (
-                              <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="w-full" />
-                            )}
+                            <CreditCard className="w-8 h-8 text-accent-teal" />
                           </div>
                           <div>
-                            <p className="font-bold text-white">{lang === 'KOR' ? '토스페이먼츠' : 'Stripe Payments'}</p>
-                            <p className="text-xs text-gray-400">{lang === 'KOR' ? '신용카드, 계좌이체, 간편결제' : 'Credit Card, Apple Pay, Google Pay'}</p>
+                            <p className="font-bold text-white">{lang === 'KOR' ? '테스트 결제' : lang === 'ENG' ? 'Test Payment' : '测试支付'}</p>
+                            <p className="text-xs text-gray-400">{lang === 'KOR' ? '실제 결제가 발생하지 않는 테스트 모드입니다.' : lang === 'ENG' ? 'This is a test mode. No real payment will be processed.' : '这是测试模式。不会处理实际支付。'}</p>
                           </div>
                         </div>
                         <div className="w-6 h-6 rounded-full bg-accent-teal flex items-center justify-center">
                           <div className="w-2 h-2 rounded-full bg-white" />
                         </div>
-                      </div>
-
-                      <div className="bg-white/5 rounded-2xl p-6 space-y-4">
-                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">{lang === 'KOR' ? '배송 정보 확인' : 'Confirm Shipping'}</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-500 mb-1">{lang === 'KOR' ? '수령인' : 'Recipient'}</p>
-                            <p className="text-gray-300">{shippingData.name}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500 mb-1">{lang === 'KOR' ? '연락처' : 'Phone'}</p>
-                            <p className="text-gray-300">{shippingData.phone}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-gray-500 mb-1">{lang === 'KOR' ? '배송지' : 'Address'}</p>
-                            <p className="text-gray-300">{shippingData.address}, {shippingData.city}, {shippingData.country}</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => setStep('shipping')}
-                          className="text-xs text-accent-teal font-bold hover:underline"
-                        >
-                          {lang === 'KOR' ? '배송 정보 수정하기' : 'Edit Shipping Info'}
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -439,7 +531,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
           <div className="lg:col-span-1">
             <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 sticky top-32">
               <h2 className="text-2xl font-serif font-bold text-white mb-8">
-                {lang === 'KOR' ? '주문 내역' : 'Order Summary'}
+                {lang === 'KOR' ? '주문 내역' : lang === 'ENG' ? 'Order Summary' : '订单摘要'}
               </h2>
               
               <div className="space-y-4 mb-8 max-h-60 overflow-y-auto pr-2 scrollbar-hide">
@@ -468,17 +560,22 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
 
               <div className="space-y-4 mb-8 pt-6 border-t border-white/10">
                 <div className="flex justify-between text-gray-400">
-                  <span>{lang === 'KOR' ? '상품 금액' : 'Subtotal'}</span>
+                  <span>{lang === 'KOR' ? '상품 금액' : lang === 'ENG' ? 'Subtotal' : '小计'}</span>
                   <span>{lang === 'KOR' ? formatPrice(totalAmount, 'KRW') : formatPrice(totalAmountUsd, 'USD')}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
-                  <span>{lang === 'KOR' ? '배송비' : 'Shipping'}</span>
-                  <span className="text-accent-teal font-bold">{lang === 'KOR' ? '무료' : 'FREE'}</span>
+                  <span>{lang === 'KOR' ? '배송비' : lang === 'ENG' ? 'Shipping' : '运费'}</span>
+                  <span className={cn("font-bold", totalShippingFee === 0 ? "text-accent-teal" : "text-white")}>
+                    {totalShippingFee === 0 
+                      ? (lang === 'KOR' ? '무료' : lang === 'ENG' ? 'FREE' : '免费') 
+                      : (lang === 'KOR' ? formatPrice(totalShippingFee, 'KRW') : formatPrice(totalShippingFeeUsd, 'USD'))
+                    }
+                  </span>
                 </div>
                 <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                  <span className="text-lg font-bold text-white">{lang === 'KOR' ? '총 결제 금액' : 'Total'}</span>
+                  <span className="text-lg font-bold text-white">{lang === 'KOR' ? '총 결제 금액' : lang === 'ENG' ? 'Total' : '总计'}</span>
                   <span className="text-3xl font-serif font-bold text-accent-gold">
-                    {lang === 'KOR' ? formatPrice(totalAmount, 'KRW') : formatPrice(totalAmountUsd, 'USD')}
+                    {lang === 'KOR' ? formatPrice(totalAmount + totalShippingFee, 'KRW') : formatPrice(totalAmountUsd + totalShippingFeeUsd, 'USD')}
                   </span>
                 </div>
               </div>
@@ -490,7 +587,15 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                     type="submit"
                     className="w-full bg-accent-gold text-primary py-5 rounded-2xl font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-accent-gold/20"
                   >
-                    {lang === 'KOR' ? '결제 단계로' : 'Continue to Payment'}
+                    {lang === 'KOR' ? '주문 내용 확인' : lang === 'ENG' ? 'Review Order' : '确认订单'}
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                ) : step === 'review' ? (
+                  <button 
+                    onClick={() => setStep('payment')}
+                    className="w-full bg-accent-gold text-primary py-5 rounded-2xl font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-accent-gold/20"
+                  >
+                    {lang === 'KOR' ? '결제 단계로' : lang === 'ENG' ? 'Continue to Payment' : '继续支付'}
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 ) : (
@@ -503,7 +608,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                       <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        {lang === 'KOR' ? '결제하기' : 'Pay Now'}
+                        {lang === 'KOR' ? '결제하기' : lang === 'ENG' ? 'Pay Now' : '立即支付'}
                         <ShieldCheck className="w-5 h-5" />
                       </>
                     )}
@@ -511,10 +616,14 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 )}
                 
                 <button 
-                  onClick={() => step === 'shipping' ? navigate('/cart') : setStep('shipping')}
+                  onClick={() => {
+                    if (step === 'shipping') navigate('/cart');
+                    else if (step === 'review') setStep('shipping');
+                    else if (step === 'payment') setStep('review');
+                  }}
                   className="w-full text-sm text-gray-500 font-bold hover:text-white transition-colors py-2"
                 >
-                  {lang === 'KOR' ? '뒤로 가기' : 'Go Back'}
+                  {lang === 'KOR' ? '뒤로 가기' : lang === 'ENG' ? 'Go Back' : '返回'}
                 </button>
               </div>
 
@@ -522,7 +631,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' }> = ({ lang }) => {
                 <div className="flex items-center gap-3 text-gray-500">
                   <ShieldCheck className="w-5 h-5 text-accent-teal" />
                   <p className="text-[10px] font-bold uppercase tracking-widest leading-tight">
-                    {lang === 'KOR' ? '보안 결제 시스템 적용' : 'Secure Encrypted Payment'}
+                    {lang === 'KOR' ? '보안 결제 시스템 적용' : lang === 'ENG' ? 'Secure Encrypted Payment' : '安全加密支付'}
                   </p>
                 </div>
               </div>

@@ -27,6 +27,9 @@ export interface Database {
           is_active: boolean
           is_featured: boolean
           weight_g: number | null
+          original_price: number | null
+          discount_rate: number | null
+          shipping_fee: number | null
           created_at: string
           updated_at: string
         }
@@ -47,6 +50,9 @@ export interface Database {
           is_active?: boolean
           is_featured?: boolean
           weight_g?: number | null
+          original_price?: number | null
+          discount_rate?: number | null
+          shipping_fee?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -67,6 +73,9 @@ export interface Database {
           is_active?: boolean
           is_featured?: boolean
           weight_g?: number | null
+          original_price?: number | null
+          discount_rate?: number | null
+          shipping_fee?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -141,6 +150,7 @@ export interface Database {
           shipping_address: string
           shipping_zipcode: string
           shipping_country: string
+          shipping_fee: number
           payment_method: string
           payment_key: string | null
           created_at: string
@@ -160,6 +170,7 @@ export interface Database {
           shipping_address: string
           shipping_zipcode: string
           shipping_country: string
+          shipping_fee: number
           payment_method: string
           payment_key?: string | null
           created_at?: string
@@ -179,6 +190,7 @@ export interface Database {
           shipping_address?: string
           shipping_zipcode?: string
           shipping_country?: string
+          shipping_fee?: number
           payment_method?: string
           payment_key?: string | null
           created_at?: string

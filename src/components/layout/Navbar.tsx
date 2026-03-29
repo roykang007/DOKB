@@ -11,8 +11,9 @@ import {
   ShoppingBag,
   Search
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useCart } from '../../contexts/CartContext';
+import { toast } from 'sonner';
 
 const DokkaebiClubIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -21,8 +22,8 @@ const DokkaebiClubIcon = ({ className }: { className?: string }) => (
 );
 
 interface NavbarProps {
-  lang: 'KOR' | 'ENG';
-  setLang: (lang: 'KOR' | 'ENG') => void;
+  lang: 'KOR' | 'ENG' | 'CHI';
+  setLang: (lang: 'KOR' | 'ENG' | 'CHI') => void;
   user: any;
   onAuthClick: () => void;
   onContactClick: () => void;
@@ -32,8 +33,20 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const { cartCount } = useCart();
   const location = useLocation();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.lang-selector')) {
+        setIsLangMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -43,7 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
 
   useEffect(() => {
     const checkAdminRole = async () => {
-      if (!user) {
+      if (!user || !isSupabaseConfigured) {
         setIsAdmin(false);
         return;
       }
@@ -61,15 +74,20 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
       }
 
       // Verify with database
-      const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('auth_id', user.id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('auth_id', user.id)
+          .single();
 
-      if (!error && data?.role === 'admin') {
-        setIsAdmin(true);
-      } else {
+        if (!error && data?.role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (err) {
+        console.error('Error checking admin role:', err);
         setIsAdmin(false);
       }
     };
@@ -78,7 +96,13 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
   }, [user]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut();
+      toast.success(lang === 'KOR' ? '로그아웃되었습니다.' : 'Logged out successfully.');
+    } else {
+      // If not configured, just reload to clear local state if any
+      window.location.reload();
+    }
   };
 
   const navItems = [
@@ -120,13 +144,44 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
         </nav>
 
         <div className="hidden md:flex items-center gap-6">
-          <button 
-            onClick={() => setLang(lang === 'KOR' ? 'ENG' : 'KOR')}
-            className="flex items-center gap-1 text-xs font-bold border border-white/20 px-2 py-1 rounded hover:bg-white/10 transition-colors"
-          >
-            <Globe className="w-3 h-3" />
-            {lang}
-          </button>
+          <div className="relative lang-selector">
+            <button 
+              onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+              className="flex items-center gap-1 text-xs font-bold border border-white/20 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              {lang === 'KOR' ? '한국어' : lang === 'ENG' ? 'ENG' : '简体中文'}
+            </button>
+            <AnimatePresence>
+              {isLangMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full mt-2 right-0 bg-primary border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[120px]"
+                >
+                  <button 
+                    onClick={() => { setLang('KOR'); setIsLangMenuOpen(false); }}
+                    className={`w-full px-4 py-2 text-left text-xs font-bold hover:bg-white/5 transition-colors ${lang === 'KOR' ? 'text-accent-teal' : 'text-white'}`}
+                  >
+                    한국어
+                  </button>
+                  <button 
+                    onClick={() => { setLang('ENG'); setIsLangMenuOpen(false); }}
+                    className={`w-full px-4 py-2 text-left text-xs font-bold hover:bg-white/5 transition-colors ${lang === 'ENG' ? 'text-accent-teal' : 'text-white'}`}
+                  >
+                    English
+                  </button>
+                  <button 
+                    onClick={() => { setLang('CHI'); setIsLangMenuOpen(false); }}
+                    className={`w-full px-4 py-2 text-left text-xs font-bold hover:bg-white/5 transition-colors ${lang === 'CHI' ? 'text-accent-teal' : 'text-white'}`}
+                  >
+                    简体中文
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <Link to="/cart" className="relative text-white hover:text-accent-teal transition-colors">
             <ShoppingBag className="w-5 h-5" />
@@ -212,16 +267,27 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
               <Link to="/cart" className="text-2xl font-serif" onClick={() => setIsMenuOpen(false)}>
                 {lang === 'KOR' ? '장바구니' : 'Cart'} ({cartCount})
               </Link>
-              <button 
-                onClick={() => {
-                  setLang(lang === 'KOR' ? 'ENG' : 'KOR');
-                  setIsMenuOpen(false);
-                }}
-                className="mx-auto flex items-center gap-2 text-lg border border-white/20 px-4 py-2 rounded"
-              >
-                <Globe className="w-5 h-5" />
-                {lang === 'KOR' ? 'English' : '한국어'}
-              </button>
+              
+              <div className="flex flex-col gap-2 pt-4 border-t border-white/10">
+                <button 
+                  onClick={() => { setLang('KOR'); setIsMenuOpen(false); }}
+                  className={`text-lg font-bold py-2 ${lang === 'KOR' ? 'text-accent-teal' : 'text-white'}`}
+                >
+                  한국어
+                </button>
+                <button 
+                  onClick={() => { setLang('ENG'); setIsMenuOpen(false); }}
+                  className={`text-lg font-bold py-2 ${lang === 'ENG' ? 'text-accent-teal' : 'text-white'}`}
+                >
+                  English
+                </button>
+                <button 
+                  onClick={() => { setLang('CHI'); setIsMenuOpen(false); }}
+                  className={`text-lg font-bold py-2 ${lang === 'CHI' ? 'text-accent-teal' : 'text-white'}`}
+                >
+                  简体中文
+                </button>
+              </div>
             </nav>
           </motion.div>
         )}
