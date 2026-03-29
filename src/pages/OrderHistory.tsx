@@ -42,7 +42,10 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }
         if (!user) {
           toast.error(lang === 'KOR' ? '로그인이 필요합니다.' : lang === 'ENG' ? 'Login required.' : '需要登录。');
           navigate('/');
+          return;
         }
+        // If user exists but dbUserId is not yet in context, we wait or set loading false
+        setLoading(false);
         return;
       }
 

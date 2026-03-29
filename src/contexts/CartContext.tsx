@@ -22,6 +22,8 @@ interface CartContextType {
   totalAmount: number;
   totalAmountUsd: number;
   loading: boolean;
+  userId: string | null;
+  dbUserId: string | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -336,7 +338,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cartCount,
       totalAmount,
       totalAmountUsd,
-      loading
+      loading,
+      userId,
+      dbUserId: userId
     }}>
       {children}
     </CartContext.Provider>
