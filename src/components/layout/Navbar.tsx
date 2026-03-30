@@ -250,15 +250,15 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 z-40 bg-primary pt-24 px-6 md:hidden"
+            className="fixed inset-0 z-40 bg-primary pt-24 pb-12 px-6 md:hidden overflow-y-auto"
           >
-            <nav className="flex flex-col gap-6 text-center">
+            <nav className="flex flex-col gap-1 text-center">
               {navItems.map((item) => (
                 item.path.startsWith('/#') ? (
                   <a 
                     key={item.key} 
                     href={item.path} 
-                    className="text-2xl font-serif"
+                    className="text-base font-sans font-medium text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.label}
@@ -267,36 +267,78 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
                   <Link 
                     key={item.key} 
                     to={item.path} 
-                    className="text-2xl font-serif"
+                    className="text-base font-sans font-medium text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.label}
                   </Link>
                 )
               ))}
-              <Link to="/cart" className="text-2xl font-serif" onClick={() => setIsMenuOpen(false)}>
+              <Link to="/cart" className="text-base font-sans font-medium text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10" onClick={() => setIsMenuOpen(false)}>
                 {lang === 'KOR' ? '장바구니' : 'Cart'} ({cartCount})
               </Link>
-              
-              <div className="flex flex-col gap-2 pt-4 border-t border-white/10">
+
+              <div className="flex flex-col gap-3 pt-4 mt-2 border-t border-white/10">
+                {/* Auth Section for Mobile */}
+                <div className="flex flex-col gap-2">
+                  {user ? (
+                    <>
+                      <Link 
+                        to="/mypage/orders"
+                        className="flex items-center justify-center gap-2 text-sm font-medium text-accent-teal py-2"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <User className="w-4 h-4" />
+                        {user.email?.split('@')[0]}
+                      </Link>
+                      <button 
+                        onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                        className="text-sm font-bold text-gray-400 py-2 flex items-center justify-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        {lang === 'KOR' ? '로그아웃' : 'Logout'}
+                      </button>
+                    </>
+                  ) : (
+                    <button 
+                      onClick={() => { onAuthClick(); setIsMenuOpen(false); }}
+                      className="text-sm font-bold text-white py-2 flex items-center justify-center gap-2"
+                    >
+                      <LogIn className="w-4 h-4 text-accent-teal" />
+                      {lang === 'KOR' ? '로그인' : 'Login'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Inquiry Button for Mobile */}
                 <button 
-                  onClick={() => { setLang('KOR'); setIsMenuOpen(false); }}
-                  className={`text-lg font-bold py-2 ${lang === 'KOR' ? 'text-accent-teal' : 'text-white'}`}
+                  onClick={() => { onContactClick(); setIsMenuOpen(false); }}
+                  className="bg-highlight-red text-white py-3 rounded-full text-sm font-bold hover:brightness-110 transition-all shadow-lg"
                 >
-                  한국어
+                  {lang === 'KOR' ? '바이어 문의' : 'Buyer Inquiry'}
                 </button>
-                <button 
-                  onClick={() => { setLang('ENG'); setIsMenuOpen(false); }}
-                  className={`text-lg font-bold py-2 ${lang === 'ENG' ? 'text-accent-teal' : 'text-white'}`}
-                >
-                  English
-                </button>
-                <button 
-                  onClick={() => { setLang('CHI'); setIsMenuOpen(false); }}
-                  className={`text-lg font-bold py-2 ${lang === 'CHI' ? 'text-accent-teal' : 'text-white'}`}
-                >
-                  简体中文
-                </button>
+
+                {/* Language Selector for Mobile */}
+                <div className="flex justify-center gap-2 py-2">
+                  <button 
+                    onClick={() => { setLang('KOR'); setIsMenuOpen(false); }}
+                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full border ${lang === 'KOR' ? 'bg-accent-teal/20 border-accent-teal text-accent-teal' : 'border-white/10 text-gray-400'}`}
+                  >
+                    한국어
+                  </button>
+                  <button 
+                    onClick={() => { setLang('ENG'); setIsMenuOpen(false); }}
+                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full border ${lang === 'ENG' ? 'bg-accent-teal/20 border-accent-teal text-accent-teal' : 'border-white/10 text-gray-400'}`}
+                  >
+                    English
+                  </button>
+                  <button 
+                    onClick={() => { setLang('CHI'); setIsMenuOpen(false); }}
+                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full border ${lang === 'CHI' ? 'bg-accent-teal/20 border-accent-teal text-accent-teal' : 'border-white/10 text-gray-400'}`}
+                  >
+                    简体中文
+                  </button>
+                </div>
               </div>
             </nav>
           </motion.div>

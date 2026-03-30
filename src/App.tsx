@@ -418,75 +418,77 @@ export default function App() {
           {/* Auth Modal */}
           <AnimatePresence>
             {isAuthModalOpen && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+              <div className="fixed inset-0 z-[100] overflow-y-auto">
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setIsAuthModalOpen(false)}
-                  className="absolute inset-0 bg-primary/80 backdrop-blur-sm"
+                  className="fixed inset-0 bg-primary/80 backdrop-blur-sm"
                 />
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="relative w-full max-w-md bg-white rounded-[2rem] p-8 lg:p-10 shadow-2xl overflow-hidden"
-                >
-                  <button onClick={() => setIsAuthModalOpen(false)} className="absolute top-6 right-6 text-gray-400 hover:text-primary transition-colors">
-                    <X className="w-6 h-6" />
-                  </button>
-                  
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl font-serif font-bold text-primary mb-2">
-                      {authMode === 'login' 
-                        ? (lang === 'KOR' ? '로그인' : lang === 'ENG' ? 'Login' : '登录') 
-                        : (lang === 'KOR' ? '회원가입' : lang === 'ENG' ? 'Sign Up' : '注册')}
-                    </h3>
-                    <p className="text-gray-500 text-sm">
-                      {lang === 'KOR' 
-                        ? '도깨비몰의 마법 같은 혜택을 누리세요' 
-                        : lang === 'ENG' 
-                        ? 'Enjoy the magical benefits of DOKB Mall' 
-                        : '享受 DOKB Mall 的神奇优惠'}
-                    </p>
-                  </div>
-
-                  <form onSubmit={handleAuth} className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '이메일' : lang === 'ENG' ? 'Email' : '电子邮件'}</label>
-                      <input name="email" required type="email" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '비밀번호' : lang === 'ENG' ? 'Password' : '密码'}</label>
-                      <input name="password" required type="password" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
-                    </div>
+                <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    className="relative w-full max-w-md bg-white rounded-[2rem] p-8 lg:p-10 shadow-2xl"
+                  >
+                    <button onClick={() => setIsAuthModalOpen(false)} className="absolute top-6 right-6 text-gray-400 hover:text-primary transition-colors">
+                      <X className="w-6 h-6" />
+                    </button>
                     
-                    {authError && <p className="text-highlight-red text-xs font-bold">{authError}</p>}
-                    
-                    <button 
-                      type="submit"
-                      disabled={formStatus === 'submitting'}
-                      className="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg disabled:opacity-50"
-                    >
-                      {formStatus === 'submitting' 
-                        ? (lang === 'KOR' ? '처리 중...' : lang === 'ENG' ? 'Processing...' : '处理中...') 
-                        : (authMode === 'login' 
+                    <div className="text-center mb-8">
+                      <h3 className="text-2xl font-serif font-bold text-primary mb-2">
+                        {authMode === 'login' 
                           ? (lang === 'KOR' ? '로그인' : lang === 'ENG' ? 'Login' : '登录') 
-                          : (lang === 'KOR' ? '가입하기' : lang === 'ENG' ? 'Sign Up' : '注册'))}
-                    </button>
-                  </form>
+                          : (lang === 'KOR' ? '회원가입' : lang === 'ENG' ? 'Sign Up' : '注册')}
+                      </h3>
+                      <p className="text-gray-500 text-sm">
+                        {lang === 'KOR' 
+                          ? '도깨비몰의 마법 같은 혜택을 누리세요' 
+                          : lang === 'ENG' 
+                          ? 'Enjoy the magical benefits of DOKB Mall' 
+                          : '享受 DOKB Mall 的神奇优惠'}
+                      </p>
+                    </div>
 
-                  <div className="mt-6 text-center">
-                    <button 
-                      onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                      className="text-sm text-accent-teal font-bold hover:underline"
-                    >
-                      {authMode === 'login' 
-                        ? (lang === 'KOR' ? '계정이 없으신가요? 회원가입' : lang === 'ENG' ? 'No account? Sign Up' : '没有账号？注册') 
-                        : (lang === 'KOR' ? '이미 계정이 있으신가요? 로그인' : lang === 'ENG' ? 'Already have an account? Login' : '已有账号？登录')}
-                    </button>
-                  </div>
-                </motion.div>
+                    <form onSubmit={handleAuth} className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '이메일' : lang === 'ENG' ? 'Email' : '电子邮件'}</label>
+                        <input name="email" required type="email" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '비밀번호' : lang === 'ENG' ? 'Password' : '密码'}</label>
+                        <input name="password" required type="password" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
+                      </div>
+                      
+                      {authError && <p className="text-highlight-red text-xs font-bold">{authError}</p>}
+                      
+                      <button 
+                        type="submit"
+                        disabled={formStatus === 'submitting'}
+                        className="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg disabled:opacity-50"
+                      >
+                        {formStatus === 'submitting' 
+                          ? (lang === 'KOR' ? '처리 중...' : lang === 'ENG' ? 'Processing...' : '处理中...') 
+                          : (authMode === 'login' 
+                            ? (lang === 'KOR' ? '로그인' : lang === 'ENG' ? 'Login' : '登录') 
+                            : (lang === 'KOR' ? '가입하기' : lang === 'ENG' ? 'Sign Up' : '注册'))}
+                      </button>
+                    </form>
+
+                    <div className="mt-6 text-center">
+                      <button 
+                        onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                        className="text-sm text-accent-teal font-bold hover:underline"
+                      >
+                        {authMode === 'login' 
+                          ? (lang === 'KOR' ? '계정이 없으신가요? 회원가입' : lang === 'ENG' ? 'No account? Sign Up' : '没有账号？注册') 
+                          : (lang === 'KOR' ? '이미 계정이 있으신가요? 로그인' : lang === 'ENG' ? 'Already have an account? Login' : '已有账号？登录')}
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
               </div>
             )}
           </AnimatePresence>
@@ -494,73 +496,75 @@ export default function App() {
           {/* Contact Modal */}
           <AnimatePresence>
             {isContactModalOpen && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+              <div className="fixed inset-0 z-[100] overflow-y-auto">
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setIsContactModalOpen(false)}
-                  className="absolute inset-0 bg-primary/80 backdrop-blur-sm"
+                  className="fixed inset-0 bg-primary/80 backdrop-blur-sm"
                 />
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="relative w-full max-w-2xl bg-white rounded-[2rem] p-8 lg:p-10 shadow-2xl overflow-hidden"
-                >
-                  <button onClick={() => setIsContactModalOpen(false)} className="absolute top-6 right-6 text-gray-400 hover:text-primary transition-colors">
-                    <X className="w-6 h-6" />
-                  </button>
-                  
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl md:text-3xl font-serif font-bold text-primary mb-2">
-                      {lang === 'KOR' ? '바이어 문의하기' : lang === 'ENG' ? 'Buyer Inquiry' : '买家咨询'}
-                    </h3>
-                    <p className="text-gray-500 text-sm">
-                      {lang === 'KOR' ? '전문 상담원이 24시간 이내에 답변해 드립니다' : lang === 'ENG' ? 'Our experts will respond within 24 hours' : '我们的专家将在 24 小时内回复'}
-                    </p>
-                  </div>
-
-                  <form onSubmit={(e) => handleFormSubmit(e, 'contact')} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '이름' : lang === 'ENG' ? 'Name' : '姓名'}</label>
-                        <input name="contact_name" required type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '이메일' : lang === 'ENG' ? 'Email' : '电子邮件'}</label>
-                        <input name="email" required type="email" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '회사명' : lang === 'ENG' ? 'Company' : '公司名称'}</label>
-                        <input name="company_name" required type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '연락처' : lang === 'ENG' ? 'Phone' : '电话'}</label>
-                        <input name="phone" type="tel" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '국가' : lang === 'ENG' ? 'Country' : '国家'}</label>
-                      <input name="country" type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '문의 내용' : lang === 'ENG' ? 'Message' : '咨询内容'}</label>
-                      <textarea name="message" required rows={4} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors resize-none text-primary" />
-                    </div>
-                    <button 
-                      type="submit"
-                      disabled={formStatus === 'submitting'}
-                      className="w-full bg-highlight-red text-white py-4 rounded-xl font-bold hover:brightness-110 transition-all shadow-lg disabled:opacity-50"
-                    >
-                      {formStatus === 'submitting' 
-                        ? (lang === 'KOR' ? '전송 중...' : lang === 'ENG' ? 'Sending...' : '发送中...') 
-                        : (lang === 'KOR' ? '문의 제출하기' : lang === 'ENG' ? 'Submit Inquiry' : '提交咨询')}
+                <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    className="relative w-full max-w-2xl bg-white rounded-[2rem] p-8 lg:p-10 shadow-2xl"
+                  >
+                    <button onClick={() => setIsContactModalOpen(false)} className="absolute top-6 right-6 text-gray-400 hover:text-primary transition-colors">
+                      <X className="w-6 h-6" />
                     </button>
-                  </form>
-                </motion.div>
+                    
+                    <div className="text-center mb-8">
+                      <h3 className="text-2xl md:text-3xl font-serif font-bold text-primary mb-2">
+                        {lang === 'KOR' ? '바이어 문의하기' : lang === 'ENG' ? 'Buyer Inquiry' : '买家咨询'}
+                      </h3>
+                      <p className="text-gray-500 text-sm">
+                        {lang === 'KOR' ? '전문 상담원이 24시간 이내에 답변해 드립니다' : lang === 'ENG' ? 'Our experts will respond within 24 hours' : '我们的专家将在 24 小时内回复'}
+                      </p>
+                    </div>
+
+                    <form onSubmit={(e) => handleFormSubmit(e, 'contact')} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '이름' : lang === 'ENG' ? 'Name' : '姓名'}</label>
+                          <input name="contact_name" required type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '이메일' : lang === 'ENG' ? 'Email' : '电子邮件'}</label>
+                          <input name="email" required type="email" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '회사명' : lang === 'ENG' ? 'Company' : '公司名称'}</label>
+                          <input name="company_name" required type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '연락처' : lang === 'ENG' ? 'Phone' : '电话'}</label>
+                          <input name="phone" type="tel" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '국가' : lang === 'ENG' ? 'Country' : '国家'}</label>
+                        <input name="country" type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '문의 내용' : lang === 'ENG' ? 'Message' : '咨询内容'}</label>
+                        <textarea name="message" required rows={4} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors resize-none text-primary" />
+                      </div>
+                      <button 
+                        type="submit"
+                        disabled={formStatus === 'submitting'}
+                        className="w-full bg-highlight-red text-white py-4 rounded-xl font-bold hover:brightness-110 transition-all shadow-lg disabled:opacity-50"
+                      >
+                        {formStatus === 'submitting' 
+                          ? (lang === 'KOR' ? '전송 중...' : lang === 'ENG' ? 'Sending...' : '发送中...') 
+                          : (lang === 'KOR' ? '문의 제출하기' : lang === 'ENG' ? 'Submit Inquiry' : '提交咨询')}
+                      </button>
+                    </form>
+                  </motion.div>
+                </div>
               </div>
             )}
           </AnimatePresence>
