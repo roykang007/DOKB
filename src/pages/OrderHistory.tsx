@@ -35,6 +35,7 @@ export const OrderHistory: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }
   const navigate = useNavigate();
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchOrders = async () => {
       if (!dbUserId) {
         // If not logged in, or dbUserId not yet available

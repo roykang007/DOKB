@@ -43,6 +43,7 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang })
 
   // Sync category state with URL search parameters
   useEffect(() => {
+    window.scrollTo(0, 0);
     const urlCategory = searchParams.get('category') || 'all';
     if (urlCategory !== category) {
       setCategory(urlCategory);

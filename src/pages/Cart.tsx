@@ -9,6 +9,10 @@ export const Cart: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) => {
   const { cartItems, updateQuantity, removeFromCart, totalAmount, totalAmountUsd, loading } = useCart();
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   if (loading) {
     return (
       <div className="pt-32 pb-20 min-h-screen bg-primary flex items-center justify-center">

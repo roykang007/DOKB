@@ -74,6 +74,7 @@ export const Checkout: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang }) =>
   });
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
