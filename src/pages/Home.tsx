@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
   Sparkles, 
@@ -355,6 +355,83 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
                 </button>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* VIP Section Promotion */}
+      <section className="py-24 bg-[#050505] text-white overflow-hidden relative">
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <motion.div 
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="lg:w-1/2"
+            >
+              <motion.span 
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-accent-gold text-sm font-bold tracking-[0.3em] uppercase mb-4 block"
+              >
+                DOKB Prestige
+              </motion.span>
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="text-5xl md:text-7xl font-serif font-bold mb-8 leading-tight"
+              >
+                The <span className="text-accent-gold italic">VIP</span> <br />Experience
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 }}
+                className="text-gray-400 text-lg mb-10 font-light leading-relaxed max-w-xl"
+              >
+                {lang === 'KOR' 
+                  ? '오직 선택받은 소수만을 위한 특별한 비즈니스 파트너십. 고미술품부터 프리미엄 부동산까지, DOKB가 제안하는 최상의 가치를 경험하십시오.' 
+                  : 'An exclusive business partnership for the selected few. From fine antiques to premium real estate, experience the ultimate value proposed by DOKB.'}
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+              >
+                <Link 
+                  to="/vip"
+                  className="inline-flex items-center gap-3 px-10 py-5 bg-transparent border border-accent-gold text-accent-gold font-bold text-lg rounded-full hover:bg-accent-gold hover:text-primary transition-all dokkaebi-glow"
+                >
+                  {lang === 'KOR' ? 'VIP 룸 입장하기' : 'Enter VIP Room'}
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+              </motion.div>
+            </motion.div>
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="lg:w-1/2 relative"
+            >
+              <div className="relative aspect-square rounded-[3rem] overflow-hidden border border-white/10">
+                <img 
+                  src="https://picsum.photos/seed/luxury-interior/1000/1000" 
+                  alt="Luxury Interior" 
+                  className="w-full h-full object-cover opacity-60"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent"></div>
+              </div>
+              {/* Floating elements */}
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-accent-gold/20 rounded-full blur-3xl"></div>
+              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-accent-teal/20 rounded-full blur-3xl"></div>
+            </motion.div>
           </div>
         </div>
       </section>

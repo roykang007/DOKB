@@ -109,6 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
     { key: 'home', label: lang === 'KOR' ? '홈' : 'Home', path: '/' },
     { key: 'products', label: lang === 'KOR' ? '상품' : 'Products', path: '/products' },
     { key: 'b2b', label: lang === 'KOR' ? 'B2B 바이어' : 'B2B Buyers', path: '/#b2b' },
+    { key: 'vip', label: lang === 'KOR' ? 'VIP' : 'VIP', path: '/vip' },
     { key: 'about', label: lang === 'KOR' ? '소개' : 'About', path: '/#about' },
   ];
 
@@ -117,6 +118,11 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
       key: 'admin-products', 
       label: lang === 'KOR' ? '상품관리' : lang === 'ENG' ? 'Products' : '产品管理', 
       path: '/admin/products' 
+    });
+    navItems.push({ 
+      key: 'admin-vip', 
+      label: lang === 'KOR' ? 'VIP 관리' : lang === 'ENG' ? 'VIP' : 'VIP 管理', 
+      path: '/admin/vip' 
     });
     navItems.push({ 
       key: 'admin-orders', 

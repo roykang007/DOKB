@@ -1,8 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Noto+Serif+SC:wght@400;700&display=swap');
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'UISDC Title Black';
+  src: url('https://cdn.jsdelivr.net/gh/uisdc/uisdc-title-black/UISDC-Title-Black.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --font-sans: "Inter", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Montserrat", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", serif;
   --color-primary: #0D1B2A;
   --color-accent-teal: #00C9B1;
@@ -13,6 +21,11 @@
 @layer base {
   body {
     @apply bg-primary text-white font-sans;
+  }
+
+  .lang-chi {
+    --font-sans: "Noto Serif SC", "Montserrat", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+    --font-serif: "UISDC Title Black", "Playfair Display", serif;
   }
 }
 

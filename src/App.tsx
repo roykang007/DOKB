@@ -21,6 +21,8 @@ import { AdminProducts } from './pages/AdminProducts';
 import { AdminUsers } from './pages/AdminUsers';
 import { AdminOrders } from './pages/AdminOrders';
 import { AdminSettings } from './pages/AdminSettings';
+import { VIPRoom } from './pages/VIPRoom';
+import { AdminVIP } from './pages/AdminVIP';
 
 const ProtectedRoute = ({ user, children, requireAdmin = false }: { user: any, children: React.ReactNode, requireAdmin?: boolean }) => {
   const navigate = useNavigate();
@@ -345,7 +347,7 @@ export default function App() {
   return (
     <Router>
       <CartProvider>
-        <div className="min-h-screen selection:bg-accent-teal selection:text-primary">
+        <div className={`min-h-screen selection:bg-accent-teal selection:text-primary ${lang === 'CHI' ? 'lang-chi' : ''}`}>
           <Toaster position="top-center" richColors />
           
           <Navbar 
@@ -388,11 +390,17 @@ export default function App() {
             <Route path="/products" element={<ProductList lang={lang} />} />
             <Route path="/products/:id" element={<ProductDetail lang={lang} />} />
             <Route path="/cart" element={<Cart lang={lang} />} />
+            <Route path="/vip" element={<VIPRoom lang={lang} onContactClick={() => setIsContactModalOpen(true)} />} />
             <Route path="/checkout" element={<Checkout lang={lang} />} />
             <Route path="/mypage/orders" element={<OrderHistory lang={lang} />} />
             <Route path="/admin/products" element={
               <ProtectedRoute user={user} requireAdmin>
                 <AdminProducts lang={lang} />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/vip" element={
+              <ProtectedRoute user={user} requireAdmin>
+                <AdminVIP />
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={
