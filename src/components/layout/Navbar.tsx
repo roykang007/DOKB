@@ -107,6 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
 
   const navItems = [
     { key: 'home', label: lang === 'KOR' ? '홈' : 'Home', path: '/' },
+    { key: 'live', label: lang === 'KOR' ? '라이브' : 'Live', path: '/live' },
     { key: 'products', label: lang === 'KOR' ? '상품' : 'Products', path: '/products' },
     { key: 'b2b', label: lang === 'KOR' ? 'B2B 바이어' : 'B2B Buyers', path: '/#b2b' },
     { key: 'vip', label: lang === 'KOR' ? 'VIP' : 'VIP', path: '/vip' },

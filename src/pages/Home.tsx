@@ -14,7 +14,8 @@ import {
   Beaker, 
   Handshake, 
   Mail,
-  User
+  User,
+  Play
 } from 'lucide-react';
 import { HERO_IMAGES } from '../constants/images';
 
@@ -103,10 +104,10 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
       stat3: lang === 'KOR' ? '30+ 국가 공급' : lang === 'ENG' ? '30+ Countries Served' : '服务 30+ 国家',
       stat4: lang === 'KOR' ? 'KOTRA 협력' : lang === 'ENG' ? 'KOTRA Partner' : 'KOTRA 合作伙伴'
     },
-    newsletter: {
-      title: lang === 'KOR' ? '도깨비몰 소식을 받아보세요' : lang === 'ENG' ? 'Stay in the Loop' : '保持联系',
-      subtext: lang === 'KOR' ? '신상품 및 바이어 특가 정보를 가장 먼저 받아보세요' : lang === 'ENG' ? 'Be the first to receive new product updates and exclusive buyer deals.' : '率先接收新产品更新和独家买家优惠。',
-      subscribe: lang === 'KOR' ? '구독하기' : lang === 'ENG' ? 'Subscribe' : '订阅'
+    live: {
+      title: lang === 'KOR' ? '도깨비 라이브 커머스' : lang === 'ENG' ? 'DOKB Live Commerce' : 'DOKB 直播',
+      subtext: lang === 'KOR' ? '실시간으로 만나는 마법 같은 쇼핑! 라이브 특가와 소통을 경험하세요' : lang === 'ENG' ? 'Magical shopping in real-time! Experience live deals and interaction.' : '实时神奇购物！体验直播优惠和互动。',
+      cta: lang === 'KOR' ? '라이브 보러가기' : lang === 'ENG' ? 'Watch Live' : '观看直播'
     }
   };
 
@@ -138,13 +139,24 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
               <span className="text-[10px] lg:text-xs font-bold text-accent-teal uppercase tracking-widest">Premium Korean Selection</span>
             </motion.div>
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-serif font-bold leading-[1.1] mb-8">
-              <span className="block text-accent-gold mb-2">{t.hero.title.split('!')[0]}!</span>
-              <span className="relative inline-block">
-                {t.hero.title.split('!')[1] || t.hero.title}
-                <svg className="absolute -bottom-2 lg:-bottom-4 left-0 w-full h-2 lg:h-3 text-accent-teal/30" viewBox="0 0 100 10" preserveAspectRatio="none">
-                  <path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeWidth="4" />
-                </svg>
-              </span>
+              {t.hero.title.includes('!') ? (
+                <>
+                  <span className="block text-accent-gold mb-2">{t.hero.title.split('!')[0]}!</span>
+                  <span className="relative inline-block">
+                    {t.hero.title.split('!')[1]}
+                    <svg className="absolute -bottom-2 lg:-bottom-4 left-0 w-full h-2 lg:h-3 text-accent-teal/30" viewBox="0 0 100 10" preserveAspectRatio="none">
+                      <path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeWidth="4" />
+                    </svg>
+                  </span>
+                </>
+              ) : (
+                <span className="relative inline-block">
+                  {t.hero.title}
+                  <svg className="absolute -bottom-2 lg:-bottom-4 left-0 w-full h-2 lg:h-3 text-accent-teal/30" viewBox="0 0 100 10" preserveAspectRatio="none">
+                    <path d="M0 5 Q 25 0, 50 5 T 100 5" fill="none" stroke="currentColor" strokeWidth="4" />
+                  </svg>
+                </span>
+              )}
             </h1>
             <p className="text-lg md:text-xl lg:text-2xl text-gray-300 mb-10 lg:mb-12 max-w-xl mx-auto lg:mx-0 leading-relaxed font-light">
               {t.hero.subtitle}
@@ -508,7 +520,7 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
         </div>
       </section>
 
-      {/* Newsletter Section */}
+      {/* Live Commerce Promotion Section */}
       <section className="py-20 lg:py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary via-[#004D40] to-accent-teal opacity-90" />
         <div className="container mx-auto px-6 relative z-10 text-center">
@@ -517,28 +529,23 @@ export const Home: React.FC<HomeProps> = ({ lang, user, userInquiries, formStatu
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl md:text-4xl lg:text-6xl font-serif font-bold mb-6">{t.newsletter.title}</h2>
-            <p className="text-base lg:text-xl text-white/80 mb-10 lg:mb-12 max-w-2xl mx-auto">{t.newsletter.subtext}</p>
+            <div className="inline-flex items-center gap-2 bg-highlight-red text-white px-4 py-1 rounded-full text-xs font-bold mb-6 animate-pulse">
+              <div className="w-2 h-2 bg-white rounded-full" />
+              LIVE
+            </div>
+            <h2 className="text-3xl md:text-4xl lg:text-6xl font-serif font-bold mb-6">{t.live.title}</h2>
+            <p className="text-base lg:text-xl text-white/80 mb-10 lg:mb-12 max-w-2xl mx-auto">{t.live.subtext}</p>
             
-            <form 
-              onSubmit={(e) => handleFormSubmit(e, 'newsletter')}
-              className="flex flex-col md:flex-row gap-4 max-w-lg mx-auto"
-            >
-              <input 
-                type="email" 
-                name="email"
-                required
-                placeholder="Email Address" 
-                className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 lg:px-8 py-3.5 lg:py-4 outline-none focus:bg-white/20 transition-all text-sm lg:text-base"
-              />
-              <button 
-                type="submit"
-                disabled={formStatus === 'submitting'}
-                className="w-full md:w-auto bg-accent-gold text-primary px-8 py-3.5 lg:py-4 rounded-full font-bold hover:brightness-110 transition-all text-sm lg:text-base shimmer-btn disabled:opacity-50"
+            <div className="flex justify-center">
+              <Link 
+                to="/live"
+                className="bg-accent-gold text-primary px-10 py-4 rounded-full font-bold hover:brightness-110 transition-all text-lg lg:text-xl shadow-2xl flex items-center gap-3 group"
               >
-                {formStatus === 'submitting' ? (lang === 'KOR' ? '처리 중...' : 'Processing...') : t.newsletter.subscribe}
-              </button>
-            </form>
+                <Play className="w-6 h-6 fill-primary" />
+                {t.live.cta}
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>

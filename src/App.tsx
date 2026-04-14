@@ -23,6 +23,7 @@ import { AdminOrders } from './pages/AdminOrders';
 import { AdminSettings } from './pages/AdminSettings';
 import { VIPRoom } from './pages/VIPRoom';
 import { AdminVIP } from './pages/AdminVIP';
+import { LiveCommerce } from './pages/LiveCommerce';
 
 const ProtectedRoute = ({ user, children, requireAdmin = false }: { user: any, children: React.ReactNode, requireAdmin?: boolean }) => {
   const navigate = useNavigate();
@@ -389,6 +390,7 @@ export default function App() {
             } />
             <Route path="/products" element={<ProductList lang={lang} />} />
             <Route path="/products/:id" element={<ProductDetail lang={lang} />} />
+            <Route path="/live" element={<LiveCommerce lang={lang} />} />
             <Route path="/cart" element={<Cart lang={lang} />} />
             <Route path="/vip" element={<VIPRoom lang={lang} onContactClick={() => setIsContactModalOpen(true)} />} />
             <Route path="/checkout" element={<Checkout lang={lang} />} />
