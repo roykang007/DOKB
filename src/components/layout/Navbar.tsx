@@ -56,40 +56,48 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
 
   useEffect(() => {
     const checkAdminRole = async () => {
-      if (!user || !isSupabaseConfigured) {
+      if (!user) {
         setIsAdmin(false);
         return;
       }
 
-      // Check for main admin email first
+      // Check for hardcoded admin
+      if (user.email === 'admin') {
+        setIsAdmin(true);
+        return;
+      }
+
+      // Check for main admin email
       if (user.email === 'admin@dokbmall.com') {
         setIsAdmin(true);
         return;
       }
 
-      // Check metadata first for speed
+      // Check metadata
       if (user.user_metadata?.role === 'admin') {
         setIsAdmin(true);
         return;
       }
 
-      // Verify with database
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('role')
-          .eq('auth_id', user.id)
-          .single();
+      // Verify with database if Supabase is configured
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('role')
+            .eq('auth_id', user.id)
+            .single();
 
-        if (!error && data?.role === 'admin') {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
+          if (!error && data?.role === 'admin') {
+            setIsAdmin(true);
+            return;
+          }
+        } catch (err) {
+          console.error('Error checking admin role:', err);
         }
-      } catch (err) {
-        console.error('Error checking admin role:', err);
-        setIsAdmin(false);
       }
+      
+      setIsAdmin(false);
     };
 
     checkAdminRole();
@@ -107,11 +115,9 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
 
   const navItems = [
     { key: 'home', label: lang === 'KOR' ? '홈' : 'Home', path: '/' },
-    { key: 'live', label: lang === 'KOR' ? '라이브' : 'Live', path: '/live' },
     { key: 'products', label: lang === 'KOR' ? '상품' : 'Products', path: '/products' },
-    { key: 'b2b', label: lang === 'KOR' ? 'B2B 바이어' : 'B2B Buyers', path: '/#b2b' },
+    { key: 'live', label: lang === 'KOR' ? '라이브' : 'Live', path: '/live' },
     { key: 'vip', label: lang === 'KOR' ? 'VIP' : 'VIP', path: '/vip' },
-    { key: 'about', label: lang === 'KOR' ? '소개' : 'About', path: '/#about' },
   ];
 
   if (isAdmin) {
@@ -149,11 +155,11 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
         <nav className="hidden md:flex items-center gap-8">
           {navItems.map((item) => (
             item.path.startsWith('/#') ? (
-              <a key={item.key} href={item.path} className="text-sm font-medium hover:text-accent-teal transition-colors uppercase tracking-wider">
+              <a key={item.key} href={item.path} className="text-base font-bold hover:text-accent-teal transition-colors uppercase tracking-wider">
                 {item.label}
               </a>
             ) : (
-              <Link key={item.key} to={item.path} className="text-sm font-medium hover:text-accent-teal transition-colors uppercase tracking-wider">
+              <Link key={item.key} to={item.path} className="text-base font-bold hover:text-accent-teal transition-colors uppercase tracking-wider">
                 {item.label}
               </Link>
             )
@@ -265,7 +271,7 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
                   <a 
                     key={item.key} 
                     href={item.path} 
-                    className="text-base font-sans font-medium text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10"
+                    className="text-lg font-sans font-bold text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.label}
@@ -274,14 +280,14 @@ export const Navbar: React.FC<NavbarProps> = ({ lang, setLang, user, onAuthClick
                   <Link 
                     key={item.key} 
                     to={item.path} 
-                    className="text-base font-sans font-medium text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10"
+                    className="text-lg font-sans font-bold text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.label}
                   </Link>
                 )
               ))}
-              <Link to="/cart" className="text-base font-sans font-medium text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10" onClick={() => setIsMenuOpen(false)}>
+              <Link to="/cart" className="text-lg font-sans font-bold text-gray-200 hover:text-accent-gold active:bg-white/5 transition-all py-2 rounded-xl border border-transparent hover:border-white/10" onClick={() => setIsMenuOpen(false)}>
                 {lang === 'KOR' ? '장바구니' : 'Cart'} ({cartCount})
               </Link>
 

@@ -40,15 +40,16 @@ const ProtectedRoute = ({ user, children, requireAdmin = false }: { user: any, c
       }
 
       if (requireAdmin) {
-        // First check metadata for quick check
-        const isMainAdmin = session.user.email === 'admin@dokbmall.com';
+        // Check for hardcoded admin or Supabase admin
+        const isHardcodedAdmin = user?.email === 'admin';
+        const isMainAdmin = user?.email === 'admin@dokbmall.com';
         
-        if (!isMainAdmin && session.user.user_metadata?.role !== 'admin') {
+        if (!isHardcodedAdmin && !isMainAdmin && user?.user_metadata?.role !== 'admin') {
           // Double check with database for security
           const { data: userData, error } = await supabase
             .from('users')
             .select('role')
-            .eq('auth_id', session.user.id)
+            .eq('auth_id', user?.id)
             .single();
 
           if (error || userData?.role !== 'admin') {
@@ -174,6 +175,20 @@ export default function App() {
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+
+    // Hardcoded Admin Login
+    if (email === 'admin' && password === '1111') {
+      setUser({
+        id: 'admin-id',
+        email: 'admin',
+        user_metadata: { role: 'admin' },
+        role: 'admin'
+      });
+      setIsAuthModalOpen(false);
+      setFormStatus('idle');
+      toast.success(lang === 'KOR' ? '관리자 계정으로 로그인되었습니다.' : 'Logged in as Admin.');
+      return;
+    }
 
     try {
       if (authMode === 'signup') {
@@ -465,7 +480,7 @@ export default function App() {
                     <form onSubmit={handleAuth} className="space-y-4">
                       <div className="space-y-1">
                         <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '이메일' : lang === 'ENG' ? 'Email' : '电子邮件'}</label>
-                        <input name="email" required type="email" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" />
+                        <input name="email" required type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-accent-teal transition-colors text-primary" placeholder={lang === 'KOR' ? '이메일 또는 admin' : 'Email or admin'} />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-bold uppercase tracking-wider text-gray-400">{lang === 'KOR' ? '비밀번호' : lang === 'ENG' ? 'Password' : '密码'}</label>
