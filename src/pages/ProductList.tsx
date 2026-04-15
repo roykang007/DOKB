@@ -75,7 +75,10 @@ export const ProductList: React.FC<{ lang: 'KOR' | 'ENG' | 'CHI' }> = ({ lang })
       try {
         let query = supabase.from('products').select('*').eq('is_active', true);
 
-        if (category !== 'all') {
+        if (category === 'dokb_brand') {
+          // Filter by category OR brand name containing 'DOKB'
+          query = query.or('category.eq.dokb_brand,brand.ilike.%DOKB%');
+        } else if (category !== 'all') {
           query = query.eq('category', category);
         }
 
